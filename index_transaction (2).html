@@ -1,0 +1,2397 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TCC — Binance Transaction Dashboard</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@300;400;500;600;700&family=Prompt:wght@400;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+<style>
+:root{
+  --bg:#060D10;--surface:#091820;--card:#0D2230;--border:#163545;--border-l:#1E4A60;
+  --gold:#F59E0B;--gold-l:#FCD34D;--gold-d:#D97706;
+  --green:#22C55E;--green-l:#4ADE80;--red:#F87171;--blue:#60A5FA;
+  --cyan:#06B6D4;--yellow:#EAB308;--purple:#A78BFA;
+  --text:#E8F4F0;--text-s:#6B9A8E;--text-d:#1E3A30;
+  --font:'IBM Plex Sans Thai',sans-serif;--font-h:'Prompt',sans-serif;--font-m:'Space Mono',monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--font);font-size:14px;line-height:1.6;overflow-x:hidden}
+::-webkit-scrollbar{width:4px;height:4px}
+::-webkit-scrollbar-track{background:var(--surface)}
+::-webkit-scrollbar-thumb{background:var(--border-l);border-radius:2px}
+input,button,select{font-family:var(--font)}
+a{color:var(--gold);text-decoration:none}
+
+/* ══════════ LOGIN SCREEN ══════════ */
+#login-screen{
+  position:fixed;inset:0;z-index:9000;
+  background:radial-gradient(ellipse at 50% 0%, rgba(15,30,20,.98) 0%, var(--bg) 70%);
+  display:flex;align-items:center;justify-content:center;padding:20px;
+}
+.login-wrap{width:100%;max-width:420px}
+.login-logo{text-align:center;margin-bottom:28px}
+.login-logo-icon{width:70px;height:70px;background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.3);border-radius:20px;display:inline-flex;align-items:center;justify-content:center;margin-bottom:10px}
+.login-logo-icon img{width:50px;height:50px;object-fit:contain}
+.login-title{font-family:var(--font-h);font-size:22px;font-weight:700;color:var(--gold)}
+.login-sub{font-size:11px;color:var(--text-s);letter-spacing:2.5px;text-transform:uppercase;margin-top:2px}
+.login-box{background:var(--card);border:1px solid var(--border);border-radius:20px;padding:28px}
+.login-mode-tabs{display:flex;background:var(--surface);border-radius:10px;padding:3px;margin-bottom:22px;gap:2px}
+.login-tab{flex:1;text-align:center;padding:8px;border-radius:8px;font-size:12px;font-weight:600;color:var(--text-s);cursor:pointer;transition:all .2s}
+.login-tab.active{background:var(--card);color:var(--gold);border:1px solid rgba(245,158,11,.25)}
+.login-field{margin-bottom:14px}
+.login-field label{display:block;font-size:10px;font-weight:700;color:var(--text-s);letter-spacing:.8px;text-transform:uppercase;margin-bottom:5px}
+.login-input{width:100%;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:11px 14px;color:var(--text);font-size:13px;transition:border-color .2s;outline:none}
+.login-input:focus{border-color:var(--gold);box-shadow:0 0 0 3px rgba(245,158,11,.1)}
+.login-input::placeholder{color:var(--text-d)}
+.login-hint{font-size:11px;color:var(--text-s);margin-top:5px;padding:8px 10px;background:rgba(245,158,11,.05);border:1px solid rgba(245,158,11,.12);border-radius:8px}
+.btn-login{width:100%;padding:12px;background:linear-gradient(135deg,var(--gold),var(--gold-d));color:#0D0A00;font-size:14px;font-weight:700;border:none;border-radius:10px;cursor:pointer;margin-top:6px;display:flex;align-items:center;justify-content:center;gap:8px;transition:filter .2s}
+.btn-login:hover{filter:brightness(1.08)}
+.btn-login:disabled{opacity:.5;cursor:not-allowed}
+.login-err{margin-top:10px;font-size:12px;color:var(--red);text-align:center;padding:8px;background:rgba(248,113,113,.07);border-radius:8px;display:none}
+.admin-toggle{text-align:center;margin-top:16px;font-size:11px;color:var(--text-s)}
+.admin-toggle span{color:var(--gold);cursor:pointer;font-weight:600}
+.admin-toggle span:hover{text-decoration:underline}
+
+/* ══════════ LAYOUT ══════════ */
+#main-app{display:none;position:relative}
+#main-app.visible{display:flex;width:100%;height:100vh;overflow:hidden}
+.sidebar{width:220px;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;flex-shrink:0;overflow-y:auto}
+.sidebar-logo{padding:18px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px}
+.logo-mark{width:34px;height:34px;background:rgba(245,158,11,.12);border:1px solid rgba(245,158,11,.3);border-radius:10px;display:flex;align-items:center;justify-content:center}
+.logo-mark img{width:24px;height:24px;object-fit:contain}
+.logo-text{font-family:var(--font-h);font-size:13px;font-weight:700;color:var(--gold);line-height:1.2}
+.logo-sub{font-size:9px;color:var(--text-s);letter-spacing:2px;text-transform:uppercase}
+
+/* Current user badge in sidebar */
+.sidebar-user{margin:8px;background:rgba(245,158,11,.06);border:1px solid rgba(245,158,11,.15);border-radius:10px;padding:10px 12px;display:flex;align-items:center;gap:8px}
+.sidebar-user-avatar{width:30px;height:30px;border-radius:50%;background:rgba(245,158,11,.2);border:1px solid rgba(245,158,11,.4);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:var(--gold);flex-shrink:0}
+.sidebar-user-name{font-size:11px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sidebar-user-role{font-size:9px;color:var(--text-s)}
+
+.nav-section{padding:8px 0}
+.nav-label{font-size:9px;font-weight:700;color:var(--text-d);letter-spacing:1.5px;text-transform:uppercase;padding:8px 16px 4px}
+.nav-item{display:flex;align-items:center;gap:9px;padding:9px 16px;cursor:pointer;color:var(--text-s);border-left:2px solid transparent;transition:all .15s;font-size:12.5px;font-weight:500}
+.nav-item:hover{color:var(--text);background:rgba(245,158,11,.04)}
+.nav-item.active{color:var(--gold);border-left-color:var(--gold);background:rgba(245,158,11,.07)}
+.nav-item svg{width:14px;height:14px;flex-shrink:0}
+.nav-item.admin-only{display:none}
+.nav-item.admin-only.show{display:flex}
+
+.sidebar-bottom{margin-top:auto;padding:12px;border-top:1px solid var(--border)}
+.btn-logout{width:100%;display:flex;align-items:center;justify-content:center;gap:7px;padding:8px;background:transparent;border:1px solid var(--border);border-radius:9px;color:var(--text-s);font-size:12px;font-weight:600;cursor:pointer;transition:all .2s}
+.btn-logout:hover{border-color:var(--red);color:var(--red)}
+
+/* ══════════ TOPBAR ══════════ */
+.main{flex:1;overflow-y:auto;background:var(--bg)}
+.topbar{position:sticky;top:0;z-index:10;background:rgba(6,13,16,.92);backdrop-filter:blur(12px);border-bottom:1px solid var(--border);padding:12px 24px;display:flex;align-items:center;justify-content:space-between;gap:12px}
+.topbar-title{font-family:var(--font-h);font-size:16px;font-weight:700;color:var(--text)}
+.topbar-right{display:flex;align-items:center;gap:10px}
+.content{padding:20px 24px;min-height:calc(100vh - 57px)}
+
+/* ══════════ MEMBER INFO BANNER ══════════ */
+.member-banner{background:var(--card);border:1px solid var(--border-l);border-radius:14px;padding:16px 20px;margin-bottom:18px;display:flex;align-items:center;gap:14px}
+.member-banner-avatar{width:48px;height:48px;border-radius:50%;background:rgba(6,182,212,.15);border:2px solid rgba(6,182,212,.4);display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:700;color:var(--cyan);flex-shrink:0}
+.member-banner-name{font-family:var(--font-h);font-size:16px;font-weight:700;color:var(--text)}
+.member-banner-email{font-size:11px;color:var(--text-s)}
+.member-banner-uid{font-size:11px;color:var(--blue);font-family:var(--font-m);margin-top:3px}
+
+/* ══════════ PAGE ══════════ */
+.page{display:none}
+.page.active{display:block;animation:fadeUp .2s ease}
+@keyframes fadeUp{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:translateY(0)}}
+
+/* ══════════ CARDS ══════════ */
+.card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:18px}
+.card-title{font-size:10px;font-weight:700;color:var(--text-s);text-transform:uppercase;letter-spacing:.8px;margin-bottom:12px;display:flex;align-items:center;gap:6px}
+.card-title svg{width:12px;height:12px}
+
+/* ══════════ STATS ══════════ */
+.stat-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:16px}
+.stat-card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:14px 16px;position:relative;overflow:hidden}
+.stat-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;border-radius:12px 12px 0 0}
+.stat-card.gold::before{background:linear-gradient(90deg,var(--gold),var(--gold-d))}
+.stat-card.green::before{background:linear-gradient(90deg,var(--green),#16A34A)}
+.stat-card.red::before{background:linear-gradient(90deg,var(--red),#DC2626)}
+.stat-card.blue::before{background:linear-gradient(90deg,var(--blue),#2563EB)}
+.stat-card.cyan::before{background:linear-gradient(90deg,var(--cyan),#0E7490)}
+.stat-card.purple::before{background:linear-gradient(90deg,var(--purple),#7C3AED)}
+.stat-lbl{font-size:10px;color:var(--text-s);text-transform:uppercase;letter-spacing:.6px;margin-bottom:6px}
+.stat-val{font-family:var(--font-h);font-size:20px;font-weight:700;line-height:1.2;color:var(--text)}
+.stat-val.gold{color:var(--gold)}.stat-val.green{color:var(--green)}.stat-val.red{color:var(--red)}.stat-val.blue{color:var(--blue)}.stat-val.cyan{color:var(--cyan)}
+.stat-sub{font-size:10px;color:var(--text-s);margin-top:3px}
+
+/* ══════════ GRID ══════════ */
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px}
+.grid-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;margin-bottom:14px}
+
+/* ══════════ FORMS ══════════ */
+.filter-bar{display:flex;gap:10px;margin-bottom:16px;align-items:center;flex-wrap:wrap}
+.form-input{background:var(--surface);border:1px solid var(--border);border-radius:9px;padding:8px 12px;color:var(--text);font-size:12.5px;transition:border-color .2s;outline:none}
+.form-input:focus{border-color:var(--gold);box-shadow:0 0 0 3px rgba(245,158,11,.12)}
+.form-input::placeholder{color:var(--text-d)}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:8px 14px;border-radius:9px;border:none;font-size:12.5px;font-weight:600;cursor:pointer;transition:all .2s}
+.btn-gold{background:linear-gradient(135deg,var(--gold),var(--gold-d));color:#0D0A00;box-shadow:0 3px 10px rgba(245,158,11,.28)}
+.btn-gold:hover{filter:brightness(1.07)}
+.btn-outline{background:transparent;border:1px solid var(--border);color:var(--text-s)}
+.btn-outline:hover{border-color:var(--green);color:var(--green)}
+.btn svg{width:13px;height:13px}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+
+/* ══════════ TABLE ══════════ */
+.table-wrap{overflow-x:auto;border-radius:12px;border:1px solid var(--border)}
+table{width:100%;border-collapse:collapse;font-size:12px}
+thead th{background:var(--surface);padding:10px 12px;text-align:left;font-size:10px;font-weight:700;color:var(--text-s);text-transform:uppercase;letter-spacing:.7px;white-space:nowrap;border-bottom:1px solid var(--border)}
+tbody tr{border-bottom:1px solid var(--border);transition:background .1s}
+tbody tr:hover{background:rgba(245,158,11,.03)}
+tbody tr:last-child{border-bottom:none}
+td{padding:10px 12px;vertical-align:middle;color:var(--text)}
+.td-num{text-align:right;font-family:var(--font-m);font-size:11px}
+
+/* ══════════ BADGES ══════════ */
+.badge{display:inline-flex;align-items:center;padding:2px 8px;border-radius:12px;font-size:10px;font-weight:700;white-space:nowrap}
+.badge-fee{background:rgba(248,113,113,.12);color:var(--red)}
+.badge-rpnl{background:rgba(245,158,11,.12);color:var(--gold)}
+.badge-fund{background:rgba(6,182,212,.12);color:var(--cyan)}
+.badge-dep{background:rgba(34,197,94,.12);color:var(--green)}
+.badge-wd{background:rgba(248,113,113,.12);color:var(--red)}
+.badge-trans{background:rgba(96,165,250,.12);color:var(--blue)}
+.coin-tag{display:inline-flex;align-items:center;gap:4px;background:rgba(6,182,212,.1);border:1px solid rgba(6,182,212,.2);border-radius:6px;padding:1px 7px;font-size:10px;font-weight:700;color:var(--cyan)}
+
+/* ══════════ DEPOSIT/WITHDRAW SUMMARY STRIP ══════════ */
+.dw-strip{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px}
+.dw-card{border-radius:12px;padding:16px;position:relative;overflow:hidden}
+.dw-card.deposit{background:rgba(34,197,94,.06);border:1px solid rgba(34,197,94,.2)}
+.dw-card.withdraw{background:rgba(248,113,113,.06);border:1px solid rgba(248,113,113,.2)}
+.dw-card.net-pos{background:rgba(34,197,94,.08);border:1px solid rgba(34,197,94,.3)}
+.dw-card.net-neg{background:rgba(248,113,113,.08);border:1px solid rgba(248,113,113,.3)}
+.dw-card.neutral{background:var(--card);border:1px solid var(--border)}
+.dw-lbl{font-size:10px;color:var(--text-s);text-transform:uppercase;letter-spacing:.6px;margin-bottom:6px}
+.dw-val{font-family:var(--font-h);font-size:20px;font-weight:700;line-height:1.2}
+.dw-sub{font-size:10px;color:var(--text-s);margin-top:3px}
+
+/* ══════════ MEMBER CARD ══════════ */
+.member-row{display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:9px;cursor:pointer;transition:background .15s}
+.member-row:hover{background:rgba(245,158,11,.05)}
+.member-row.selected{background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.2)}
+.member-avatar{width:28px;height:28px;border-radius:50%;background:rgba(245,158,11,.15);border:1px solid rgba(245,158,11,.3);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:var(--gold);flex-shrink:0}
+
+/* ══════════ LOADING ══════════ */
+.spinner{width:18px;height:18px;border:2px solid var(--border);border-top-color:var(--gold);border-radius:50%;animation:spin .65s linear infinite;display:inline-block}
+@keyframes spin{to{transform:rotate(360deg)}}
+.loading-box{display:flex;align-items:center;justify-content:center;padding:40px;gap:10px;color:var(--text-s)}
+.empty-box{text-align:center;padding:40px;color:var(--text-s)}
+.empty-icon{font-size:36px;margin-bottom:10px}
+.range-chip{display:inline-flex;align-items:center;gap:5px;background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.2);border-radius:8px;padding:4px 10px;font-size:11px;color:var(--gold)}
+
+/* ══════════ PAGINATION ══════════ */
+.pagination{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;border-top:1px solid var(--border);font-size:11px;color:var(--text-s)}
+.page-btns{display:flex;gap:4px}
+.pg-btn{width:28px;height:28px;border-radius:7px;border:1px solid var(--border);background:var(--surface);color:var(--text-s);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:11px;transition:all .15s}
+.pg-btn:hover,.pg-btn.active{border-color:var(--gold);color:var(--gold);background:rgba(245,158,11,.08)}
+.pg-btn:disabled{opacity:.35;cursor:not-allowed}
+
+/* ══════════ TOAST ══════════ */
+#toasts{position:fixed;bottom:20px;right:16px;z-index:9999;display:flex;flex-direction:column-reverse;gap:8px;pointer-events:none;max-width:320px}
+.toast{background:rgba(9,24,32,.95);backdrop-filter:blur(12px);border:1px solid var(--border-l);border-radius:12px;padding:10px 14px;font-size:12.5px;color:var(--text);pointer-events:all;animation:tIn .25s ease;display:flex;align-items:center;gap:8px}
+.toast.success{border-color:rgba(34,197,94,.3)}.toast.error{border-color:rgba(248,113,113,.3)}
+@keyframes tIn{from{transform:translateX(20px);opacity:0}to{transform:translateX(0);opacity:1}}
+
+/* ══════════ PAYMENT PAGE ══════════ */
+.pay-search-box{background:var(--card);border:1px solid var(--border-l);border-radius:16px;padding:20px 22px;margin-bottom:18px}
+.pay-search-title{font-family:var(--font-h);font-size:14px;font-weight:700;color:var(--gold);margin-bottom:12px;display:flex;align-items:center;gap:8px}
+.pay-search-row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.pay-search-input{flex:1;min-width:200px;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:10px 14px;color:var(--text);font-size:13px;outline:none;transition:border-color .2s;font-family:var(--font-m)}
+.pay-search-input:focus{border-color:var(--gold);box-shadow:0 0 0 3px rgba(245,158,11,.12)}
+.pay-search-input::placeholder{color:var(--text-d);font-family:var(--font)}
+.pay-result-card{background:var(--card);border:1px solid var(--border-l);border-radius:16px;padding:18px 20px;margin-bottom:16px;animation:fadeUp .25s ease}
+.pay-member-header{display:flex;align-items:center;gap:14px;margin-bottom:16px;padding-bottom:14px;border-bottom:1px solid var(--border)}
+.pay-member-avatar{width:52px;height:52px;border-radius:50%;background:linear-gradient(135deg,rgba(245,158,11,.2),rgba(6,182,212,.15));border:2px solid rgba(245,158,11,.4);display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:800;color:var(--gold);flex-shrink:0}
+.pay-member-name{font-family:var(--font-h);font-size:17px;font-weight:700;color:var(--text)}
+.pay-member-meta{font-size:11px;color:var(--text-s);margin-top:2px}
+.pay-member-id{font-size:11px;color:var(--blue);font-family:var(--font-m);margin-top:3px}
+.pay-kpi-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:10px;margin-bottom:14px}
+.pay-kpi{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:12px 13px;position:relative;overflow:hidden}
+.pay-kpi::before{content:'';position:absolute;top:0;left:0;right:0;height:2px}
+.pay-kpi.gold::before{background:linear-gradient(90deg,var(--gold),var(--gold-d))}
+.pay-kpi.green::before{background:linear-gradient(90deg,var(--green),#16A34A)}
+.pay-kpi.blue::before{background:linear-gradient(90deg,var(--blue),#2563EB)}
+.pay-kpi.cyan::before{background:linear-gradient(90deg,var(--cyan),#0E7490)}
+.pay-kpi.purple::before{background:linear-gradient(90deg,var(--purple),#7C3AED)}
+.pay-kpi.red::before{background:linear-gradient(90deg,var(--red),#DC2626)}
+.pay-kpi-lbl{font-size:9.5px;color:var(--text-s);text-transform:uppercase;letter-spacing:.6px;margin-bottom:5px;font-weight:700}
+.pay-kpi-val{font-family:var(--font-h);font-size:16px;font-weight:800;line-height:1.2;color:var(--text)}
+.pay-kpi-sub{font-size:9px;color:var(--text-s);margin-top:3px}
+.pay-pos-badge{display:inline-flex;align-items:center;gap:5px;background:rgba(34,197,94,.1);border:1px solid rgba(34,197,94,.3);border-radius:8px;padding:3px 10px;font-size:11px;font-weight:700;color:var(--green)}
+.pay-chart-row{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px}
+.pay-all-table-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:8px}
+
+/* ══════════ TEAM COMMISSION PAGE ══════════ */
+.team-month-tabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:16px}
+.team-month-tab{padding:5px 12px;border-radius:8px;border:1px solid var(--border);background:var(--surface);color:var(--text-s);font-size:11px;font-weight:600;cursor:pointer;transition:all .15s}
+.team-month-tab:hover{border-color:var(--gold);color:var(--gold)}
+.team-month-tab.active{background:rgba(245,158,11,.12);border-color:var(--gold);color:var(--gold)}
+.team-summary-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px}
+.team-card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:14px 16px;cursor:pointer;transition:all .2s;position:relative;overflow:hidden}
+.team-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px}
+.team-card.t0::before{background:linear-gradient(90deg,#F59E0B,#D97706)}
+.team-card.t1::before{background:linear-gradient(90deg,#22C55E,#16A34A)}
+.team-card.t2::before{background:linear-gradient(90deg,#60A5FA,#2563EB)}
+.team-card.t3::before{background:linear-gradient(90deg,#A78BFA,#7C3AED)}
+.team-card.t4::before{background:linear-gradient(90deg,#06B6D4,#0E7490)}
+.team-card.t5::before{background:linear-gradient(90deg,#F87171,#DC2626)}
+.team-card:hover{border-color:var(--border-l);transform:translateY(-1px)}
+.team-card.selected{border-color:var(--gold);background:rgba(245,158,11,.05)}
+.team-name{font-family:var(--font-h);font-size:13px;font-weight:700;color:var(--text);margin-bottom:6px}
+.team-commission{font-family:var(--font-h);font-size:18px;font-weight:800;color:var(--gold)}
+.team-count{font-size:10px;color:var(--text-s);margin-top:3px}
+.team-detail-area{background:var(--card);border:1px solid var(--border-l);border-radius:14px;padding:18px;margin-top:14px}
+
+/* ══════════ RESPONSIVE ══════════ */
+@media(max-width:1100px){
+  .stat-grid{grid-template-columns:repeat(3,1fr)}
+  .dw-strip{grid-template-columns:repeat(2,1fr)}
+}
+@media(max-width:800px){
+  .sidebar{display:none}
+  .grid-2,.grid-3{grid-template-columns:1fr}
+  .stat-grid,.dw-strip{grid-template-columns:repeat(2,1fr)}
+  .content{padding:12px 12px 100px}
+  .topbar{padding:10px 14px;gap:8px}
+  .topbar-title{font-size:14px}
+  .member-banner{padding:12px 14px;gap:10px}
+}
+
+/* ══════════ MOBILE BOTTOM NAV ══════════ */
+.mobile-nav{
+  display:none;
+  position:fixed;bottom:0;left:0;right:0;z-index:500;
+  background:rgba(6,13,18,.97);
+  backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);
+  border-top:1px solid rgba(245,158,11,.12);
+  padding:6px 6px env(safe-area-inset-bottom,10px);
+  grid-template-columns:repeat(5,1fr);
+  gap:2px;
+  box-shadow:0 -6px 40px rgba(0,0,0,.55);
+}
+.mnav-item{
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;
+  padding:8px 2px 5px;cursor:pointer;min-height:54px;
+  color:rgba(107,154,142,.75);font-size:9.5px;letter-spacing:.25px;font-weight:600;
+  border-radius:14px;transition:color .18s,background .18s,transform .15s;
+  position:relative;
+  -webkit-tap-highlight-color:transparent;user-select:none;
+}
+.mnav-item svg{width:21px;height:21px;flex-shrink:0;transition:transform .18s}
+.mnav-item.active{color:var(--gold)}
+.mnav-item.active svg{transform:scale(1.12)}
+.mnav-item.active::after{
+  content:'';position:absolute;bottom:-6px;left:50%;transform:translateX(-50%);
+  width:0;height:0;
+}
+.mnav-item.active::before{
+  content:'';position:absolute;top:0;left:50%;transform:translateX(-50%);
+  width:32px;height:2.5px;background:linear-gradient(90deg,var(--gold-l),var(--gold-d));
+  border-radius:0 0 3px 3px;box-shadow:0 0 8px rgba(245,158,11,.5);
+}
+.mnav-item:active{transform:scale(.88);opacity:.65}
+/* ─── Burger menu items ─── */
+.burger-menu-item{
+  display:flex;align-items:center;gap:14px;padding:15px 16px;
+  border-radius:14px;cursor:pointer;color:var(--text);font-size:15px;font-weight:500;
+  -webkit-tap-highlight-color:transparent;transition:background .15s;
+}
+.burger-menu-item:active{background:rgba(255,255,255,.08)}
+.burger-menu-item svg{width:20px;height:20px;color:var(--text-s)}
+
+/* ══════════ MOBILE RESPONSIVE ══════════ */
+@media(max-width:800px){
+  .mobile-nav{display:grid}
+  #toasts{bottom:88px}
+  .content{padding:14px 13px 106px!important}
+  .grid-2,.grid-3{grid-template-columns:1fr!important}
+  .topbar{padding:11px 15px}
+  .topbar-title{font-size:15px}
+
+  /* ─── Stat cards ─── */
+  .stat-grid{grid-template-columns:repeat(2,1fr)!important;gap:12px}
+  .stat-card{
+    border-radius:20px;padding:18px 17px;
+    background:linear-gradient(145deg,var(--card) 0%,rgba(13,34,48,.9) 100%);
+  }
+  .stat-card::before{height:3px}
+  .stat-lbl{font-size:10px;letter-spacing:.8px;font-weight:700;opacity:.85}
+  .stat-val{font-size:24px!important;font-weight:800;line-height:1.1;margin:7px 0 3px;letter-spacing:-.4px}
+  .stat-sub{font-size:11px;opacity:.6;font-weight:500}
+
+  /* ─── DW strip ─── */
+  .dw-strip{grid-template-columns:repeat(2,1fr)!important;gap:12px}
+  .dw-card{border-radius:20px;padding:18px 17px}
+  .dw-lbl{font-size:10px;font-weight:700;letter-spacing:.8px;opacity:.85}
+  .dw-val{font-size:22px!important;font-weight:800;line-height:1.1;letter-spacing:-.3px;margin:7px 0 0}
+  .dw-sub{font-size:11px;margin-top:5px;opacity:.65;font-weight:500}
+
+  /* ─── General cards ─── */
+  .card{border-radius:20px;padding:18px 17px}
+  .card-title{font-size:13.5px;font-weight:700;margin-bottom:15px;letter-spacing:.1px}
+
+  /* ─── Member banner ─── */
+  .member-banner{
+    border-radius:20px;padding:18px;
+    background:linear-gradient(135deg,rgba(6,182,212,.07) 0%,rgba(13,34,48,.7) 100%);
+    border:1px solid rgba(6,182,212,.18);
+  }
+  .member-banner-avatar{width:54px;height:54px;font-size:20px;border-width:2px;flex-shrink:0}
+  .member-banner-name{font-size:17px;font-weight:700}
+  .member-banner-email{font-size:11.5px}
+  .member-banner-uid{font-size:11px;margin-top:4px}
+
+  /* ─── Tables ─── */
+  .table-wrap{border-radius:16px;overflow-x:auto;-webkit-overflow-scrolling:touch}
+  table{font-size:12px}
+  td,thead th{padding:10px 11px}
+  thead th{font-size:9.5px;letter-spacing:.5px}
+
+  /* ─── Badges ─── */
+  .badge{font-size:10.5px;padding:3px 9px;border-radius:14px}
+
+  /* ─── Filter bar ─── */
+  .filter-bar{gap:9px}
+  .form-input{font-size:13px;padding:9px 12px;border-radius:11px}
+  .btn{padding:9px 15px;border-radius:11px;font-size:13px}
+
+  /* ─── Pagination ─── */
+  .pagination{flex-direction:column;gap:9px;align-items:center;padding:14px}
+  .pg-btn{width:34px;height:34px;font-size:12px;border-radius:9px}
+
+  /* ─── Members page ─── */
+  #page-members>div{flex-direction:column!important;gap:13px}
+  #page-members>div>div:first-child{width:100%!important}
+
+  /* ─── Sub-page stat grids ─── */
+  #page-pnl .stat-grid,#page-fees .stat-grid,#page-funding .stat-grid{grid-template-columns:repeat(2,1fr)!important}
+
+  /* ─── Range chip ─── */
+  .range-chip{font-size:11px;padding:5px 11px}
+
+  /* ─── Scroll hint for wide tables ─── */
+  .table-wrap::after{
+    content:'';position:absolute;right:0;top:0;bottom:0;width:20px;
+    background:linear-gradient(to left,rgba(9,24,32,.8),transparent);
+    pointer-events:none;border-radius:0 16px 16px 0;
+  }
+  .table-wrap{position:relative}
+}
+</style>
+</head>
+<body>
+<div id="toasts"></div>
+
+<!-- MOBILE BOTTOM NAV -->
+<div class="mobile-nav" id="mobileNav" style="display:none">
+  <div class="mnav-item active" id="mn-overview" onclick="showPage('overview');setMNav('overview')">
+    <i data-lucide="layout-dashboard"></i>หน้าหลัก
+  </div>
+  <div class="mnav-item" id="mn-funding" onclick="showPage('funding');setMNav('funding')">
+    <i data-lucide="clock"></i>Funding
+  </div>
+  <div class="mnav-item" id="mn-depwd" onclick="showPage('depwd');setMNav('depwd')">
+    <i data-lucide="arrow-left-right"></i>ฝาก/ถอน
+  </div>
+  <div class="mnav-item" id="mn-pnl" onclick="showPage('pnl');setMNav('pnl')">
+    <i data-lucide="trending-up"></i>PnL
+  </div>
+  <div class="mnav-item" id="mn-burger" onclick="toggleBurgerMenu()">
+    <i data-lucide="grid-2x2"></i>เพิ่มเติม
+  </div>
+</div>
+
+<!-- BURGER MENU OVERLAY -->
+<div id="burger-overlay" onclick="closeBurgerMenu()" style="display:none;position:fixed;inset:0;z-index:490;background:rgba(0,0,0,.5);backdrop-filter:blur(4px)"></div>
+<div id="burger-panel" style="display:none;position:fixed;bottom:76px;left:10px;right:10px;z-index:495;background:rgba(8,20,28,.98);border:1px solid rgba(245,158,11,.15);border-radius:22px;padding:10px;box-shadow:0 -12px 48px rgba(0,0,0,.7)">
+  <div style="font-size:10px;color:var(--text-s);text-transform:uppercase;letter-spacing:1.2px;padding:8px 12px 10px;font-weight:700">เมนูเพิ่มเติม</div>
+  <div class="burger-menu-item" onclick="showPage('fees');setMNav('burger');closeBurgerMenu()">
+    <i data-lucide="minus-circle"></i><span>ค่าธรรมเนียม</span>
+  </div>
+  <div class="burger-menu-item" onclick="showPage('transactions');setMNav('burger');closeBurgerMenu()">
+    <i data-lucide="list"></i><span>รายการทั้งหมด</span>
+  </div>
+  <div class="burger-menu-item" onclick="showPage('payment');setMNav('burger');closeBurgerMenu()">
+    <i data-lucide="credit-card"></i><span>การจ่ายเงิน</span>
+  </div>
+  <div class="burger-menu-item" onclick="showPage('teamcommission');setMNav('burger');closeBurgerMenu()">
+    <i data-lucide="bar-chart-2"></i><span>คอมมิชั่นทีม</span>
+  </div>
+  <div class="burger-menu-item" id="burger-members-item" style="display:none" onclick="showPage('members');closeBurgerMenu()">
+    <i data-lucide="users"></i><span>รายงานสมาชิก (Admin)</span>
+  </div>
+  <div style="border-top:1px solid rgba(255,255,255,.06);margin-top:6px;padding-top:6px">
+    <div class="burger-menu-item" onclick="loadAll();closeBurgerMenu()">
+      <i data-lucide="refresh-cw"></i><span>รีเฟรชข้อมูล</span>
+    </div>
+    <div class="burger-menu-item" style="color:var(--red)" onclick="doLogout();closeBurgerMenu()">
+      <i data-lucide="log-out"></i><span>ออกจากระบบ</span>
+    </div>
+  </div>
+</div>
+<div id="login-screen">
+  <div class="login-wrap">
+    <div class="login-logo">
+      <div class="login-logo-icon">
+        <img src="https://i.ibb.co/gLhTwTLV/TCC-Logo.png" alt="">
+      </div>
+      <div class="login-title">Trader Cafe</div>
+      <div class="login-sub">Transaction Dashboard</div>
+    </div>
+    <div class="login-box">
+      <div class="login-mode-tabs">
+        <div class="login-tab active" id="tab-member" onclick="switchLoginMode('member')">
+          👤 สมาชิก
+        </div>
+        <div class="login-tab" id="tab-admin" onclick="switchLoginMode('admin')">
+          🔐 Admin
+        </div>
+      </div>
+
+      <!-- Member login -->
+      <div id="login-member-form">
+        <div class="login-field">
+          <label>Binance User ID</label>
+          <input type="text" class="login-input" id="m-uid" placeholder="เช่น 54859697" inputmode="numeric">
+        </div>
+        <div class="login-field">
+          <label>อีเมล (ที่ลงทะเบียนไว้)</label>
+          <input type="email" class="login-input" id="m-email" placeholder="example@gmail.com"
+            onkeyup="if(event.key==='Enter')memberLogin()">
+          <div class="login-hint">🔒 กรอก User ID และอีเมลที่ลงทะเบียนไว้ใน TCC เพื่อดูข้อมูลเฉพาะของคุณ</div>
+        </div>
+        <button class="btn-login" id="m-login-btn" onclick="memberLogin()">
+          <span id="m-login-spinner" style="display:none"><div class="spinner" style="width:14px;height:14px;border-width:1.5px;border-top-color:#0D0A00"></div></span>
+          เข้าดูข้อมูลของฉัน
+        </button>
+        <div class="login-err" id="m-login-err"></div>
+      </div>
+
+      <!-- Admin login -->
+      <div id="login-admin-form" style="display:none">
+        <div class="login-field">
+          <label>รหัส Admin</label>
+          <input type="password" class="login-input" id="a-pass" placeholder="••••••••"
+            onkeyup="if(event.key==='Enter')adminLogin()">
+          <div class="login-hint">🔐 Admin สามารถดูข้อมูลสมาชิกทั้งหมดได้</div>
+        </div>
+        <button class="btn-login" id="a-login-btn" onclick="adminLogin()">
+          <span id="a-login-spinner" style="display:none"><div class="spinner" style="width:14px;height:14px;border-width:1.5px;border-top-color:#0D0A00"></div></span>
+          เข้าสู่ระบบ Admin
+        </button>
+        <div class="login-err" id="a-login-err"></div>
+      </div>
+    </div>
+    <div style="text-align:center;margin-top:14px;font-size:11px;color:var(--text-d)">
+      ข้อมูลดึงจาก Binance Transaction History • Trader Cafe Club
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════
+     MAIN APP
+══════════════════════════════════════ -->
+<div id="main-app">
+  <!-- SIDEBAR -->
+  <nav class="sidebar">
+    <div class="sidebar-logo">
+      <div class="logo-mark"><img src="https://i.ibb.co/gLhTwTLV/TCC-Logo.png" alt=""></div>
+      <div>
+        <div class="logo-text">Trader Cafe</div>
+        <div class="logo-sub">TX Dashboard</div>
+      </div>
+    </div>
+
+    <!-- Current User -->
+    <div class="sidebar-user" id="sidebar-user-badge">
+      <div class="sidebar-user-avatar" id="sidebar-avatar">?</div>
+      <div style="min-width:0">
+        <div class="sidebar-user-name" id="sidebar-name">—</div>
+        <div class="sidebar-user-role" id="sidebar-role">—</div>
+      </div>
+    </div>
+
+    <div class="nav-section">
+      <div class="nav-label">ภาพรวม</div>
+      <div class="nav-item active" onclick="showPage('overview')">
+        <i data-lucide="layout-dashboard"></i> Dashboard
+      </div>
+      <div class="nav-item" onclick="showPage('depwd')">
+        <i data-lucide="arrow-left-right"></i> ฝาก / ถอน
+      </div>
+      <div class="nav-item" onclick="showPage('pnl')">
+        <i data-lucide="trending-up"></i> Realized PnL
+      </div>
+      <div class="nav-item" onclick="showPage('fees')">
+        <i data-lucide="minus-circle"></i> ค่าธรรมเนียม
+      </div>
+      <div class="nav-item" onclick="showPage('funding')">
+        <i data-lucide="clock"></i> Funding Fee
+      </div>
+      <div class="nav-item" onclick="showPage('transactions')">
+        <i data-lucide="list"></i> รายการทั้งหมด
+      </div>
+    </div>
+
+    <!-- Payment section (visible to all) -->
+    <div class="nav-section">
+      <div class="nav-label">การเงิน</div>
+      <div class="nav-item" onclick="showPage('payment')" id="nav-payment">
+        <i data-lucide="credit-card"></i> การจ่ายเงิน
+      </div>
+      <div class="nav-item" onclick="showPage('teamcommission')" id="nav-teamcommission">
+        <i data-lucide="bar-chart-2"></i> คอมมิชั่นทีม
+      </div>
+    </div>
+
+    <!-- Admin Only -->
+    <div class="nav-section" id="admin-nav-section" style="display:none">
+      <div class="nav-label">Admin</div>
+      <div class="nav-item" onclick="showPage('members')">
+        <i data-lucide="users"></i> รายงานสมาชิก
+      </div>
+    </div>
+
+    <div class="sidebar-bottom">
+      <div style="font-size:9px;color:var(--text-d);margin-bottom:6px;text-align:center" id="last-updated">—</div>
+      <button class="btn-logout" onclick="doLogout()">
+        <i data-lucide="log-out" style="width:13px;height:13px"></i> ออกจากระบบ
+      </button>
+    </div>
+  </nav>
+
+  <!-- MAIN CONTENT -->
+  <div class="main">
+    <div class="topbar">
+      <div class="topbar-title" id="page-title">📊 Dashboard</div>
+      <div class="topbar-right">
+        <div id="sync-status" class="range-chip" style="display:none">
+          <div class="spinner" style="width:12px;height:12px;border-width:1.5px"></div> โหลด...
+        </div>
+        <button class="btn btn-gold" onclick="loadAll()" id="refresh-btn">
+          <i data-lucide="refresh-cw"></i> Refresh
+        </button>
+      </div>
+    </div>
+
+    <div class="content">
+
+      <!-- ══════ PAGE: OVERVIEW ══════ -->
+      <div class="page active" id="page-overview">
+        <!-- Member info banner (shown for member mode) -->
+        <div class="member-banner" id="member-banner" style="display:none">
+          <div class="member-banner-avatar" id="mb-avatar">?</div>
+          <div>
+            <div class="member-banner-name" id="mb-name">—</div>
+            <div class="member-banner-email" id="mb-email">—</div>
+            <div class="member-banner-uid" id="mb-uid">—</div>
+          </div>
+        </div>
+
+        <div class="stat-grid" id="stat-grid">
+          <div class="stat-card gold"><div class="stat-lbl" id="sl-members">สมาชิก</div><div class="stat-val gold" id="s-members">—</div><div class="stat-sub" id="ss-members">ราย</div></div>
+          <div class="stat-card green"><div class="stat-lbl">รายการทั้งหมด</div><div class="stat-val green" id="s-txcount">—</div><div class="stat-sub">รายการ</div></div>
+          <div class="stat-card gold"><div class="stat-lbl">Realized PnL</div><div class="stat-val" id="s-pnl" style="color:var(--green)">—</div><div class="stat-sub">USDT</div></div>
+          <div class="stat-card red"><div class="stat-lbl">ค่าธรรมเนียมรวม</div><div class="stat-val red" id="s-fees">—</div><div class="stat-sub">USDT</div></div>
+          <div class="stat-card cyan"><div class="stat-lbl">Funding Fee</div><div class="stat-val cyan" id="s-funding">—</div><div class="stat-sub">USDT</div></div>
+        </div>
+
+        <div class="card" style="margin-bottom:14px">
+          <div class="card-title"><i data-lucide="bar-chart-2"></i> Net PnL ต่อสมาชิก (หลังหักค่าธรรมเนียม)</div>
+          <div style="position:relative;width:100%;height:240px">
+            <canvas id="chart-member-pnl" role="img" aria-label="Net PnL per member">Net PnL per member</canvas>
+          </div>
+        </div>
+
+        <div class="grid-2">
+          <div class="card">
+            <div class="card-title"><i data-lucide="pie-chart"></i> สัดส่วนประเภทรายการ</div>
+            <div style="display:flex;gap:16px;align-items:center">
+              <div style="position:relative;width:100%;height:180px;flex:1">
+                <canvas id="chart-op-pie" role="img" aria-label="Operation type pie">Type distribution</canvas>
+              </div>
+              <div id="pie-legend" style="font-size:11px;color:var(--text-s);display:flex;flex-direction:column;gap:6px;min-width:110px"></div>
+            </div>
+          </div>
+          <div class="card">
+            <div class="card-title"><i data-lucide="trending-up"></i> Cumulative PnL ตามเวลา</div>
+            <div style="position:relative;width:100%;height:180px">
+              <canvas id="chart-pnl-time" role="img" aria-label="Cumulative PnL over time">Cumulative PnL</canvas>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-title"><i data-lucide="clock"></i> รายการล่าสุด</div>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>เวลา</th><th>สมาชิก</th><th>ประเภท</th><th>Account</th><th>Coin</th><th class="td-num">Change</th></tr></thead>
+              <tbody id="recent-tbody"><tr><td colspan="6"><div class="loading-box"><div class="spinner"></div></div></td></tr></tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Admin diagnostic panel -->
+        <div class="card" id="admin-diag-card" style="display:none;border:1px solid rgba(245,158,11,.3);background:rgba(245,158,11,.03)">
+          <div class="card-title" style="color:var(--gold)"><i data-lucide="alert-circle"></i> 🔍 วิเคราะห์ตัวเลข (Admin Diagnostic)</div>
+          <div style="font-size:11px;color:var(--text-s);margin-bottom:10px">แสดง Top 10 รายการที่มี Change สูงสุด เพื่อตรวจสอบว่ารายการใดทำให้ยอดรวมผิดปกติ</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px">
+            <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:10px">
+              <div style="font-size:10px;color:var(--text-s);margin-bottom:6px;text-transform:uppercase">📥 Top 10 Deposit ใหญ่สุด</div>
+              <div id="diag-top-dep" style="font-size:11px"></div>
+            </div>
+            <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:10px">
+              <div style="font-size:10px;color:var(--text-s);margin-bottom:6px;text-transform:uppercase">📤 Top 10 Withdraw ใหญ่สุด</div>
+              <div id="diag-top-wd" style="font-size:11px"></div>
+            </div>
+          </div>
+          <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:10px;margin-bottom:10px">
+            <div style="font-size:10px;color:var(--text-s);margin-bottom:8px;text-transform:uppercase">📊 ยอดรวม Deposit/Withdraw แยกตาม Coin</div>
+            <div id="diag-coin-breakdown" style="font-size:11px;display:flex;flex-wrap:wrap;gap:8px"></div>
+          </div>
+          <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:10px">
+            <div style="font-size:10px;color:var(--text-s);margin-bottom:8px;text-transform:uppercase">👤 Deposit/Withdraw แยกตามสมาชิก</div>
+            <div id="diag-member-breakdown" style="font-size:11px"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ══════ PAGE: DEPOSIT/WITHDRAW ══════ -->
+      <div class="page" id="page-depwd">
+        <div class="member-banner" id="dw-member-banner" style="display:none">
+          <div class="member-banner-avatar" id="dw-mb-avatar">?</div>
+          <div>
+            <div class="member-banner-name" id="dw-mb-name">—</div>
+            <div class="member-banner-uid" id="dw-mb-uid">—</div>
+          </div>
+        </div>
+
+        <!-- Summary Strip -->
+        <div class="dw-strip">
+          <div class="dw-card deposit">
+            <div class="dw-lbl">💰 Deposit รวม (USDT)</div>
+            <div class="dw-val" id="dw-dep" style="color:var(--green)">—</div>
+            <div class="dw-sub" id="dw-dep-count">0 รายการ</div>
+          </div>
+          <div class="dw-card withdraw">
+            <div class="dw-lbl">💸 Withdraw รวม (USDT)</div>
+            <div class="dw-val" id="dw-wd" style="color:var(--red)">—</div>
+            <div class="dw-sub" id="dw-wd-count">0 รายการ</div>
+          </div>
+          <div class="dw-card neutral" id="dw-net-card">
+            <div class="dw-lbl">📊 Net (Dep − Wd) USDT</div>
+            <div class="dw-val" id="dw-net">—</div>
+            <div class="dw-sub">USDT</div>
+          </div>
+          <div class="dw-card neutral">
+            <div class="dw-lbl">🔄 Transfer รวม</div>
+            <div class="dw-val" id="dw-trans" style="color:var(--blue)">—</div>
+            <div class="dw-sub" id="dw-trans-count">0 รายการ</div>
+          </div>
+        </div>
+
+        <!-- Non-USDT Tokens Section -->
+        <div id="other-coins-section" style="display:none;margin-bottom:14px">
+          <div class="card">
+            <div class="card-title"><i data-lucide="coins"></i> 🪙 Token อื่นๆ (จำนวน Token ตามรายการ — ไม่รวมในยอด USDT)</div>
+            <div id="other-coins-grid" style="display:flex;flex-wrap:wrap;gap:10px;margin-top:4px"></div>
+          </div>
+        </div>
+
+        <!-- Charts row -->
+        <div class="grid-2" style="margin-bottom:14px">
+          <div class="card">
+            <div class="card-title"><i data-lucide="bar-chart-2"></i> Deposit vs Withdraw ต่อสมาชิก</div>
+            <div style="position:relative;width:100%;height:220px">
+              <canvas id="chart-dw-member" role="img" aria-label="Deposit vs Withdraw per member">Deposit vs Withdraw</canvas>
+            </div>
+          </div>
+          <div class="card">
+            <div class="card-title"><i data-lucide="calendar"></i> ยอดฝาก/ถอนรายวัน</div>
+            <div style="position:relative;width:100%;height:220px">
+              <canvas id="chart-dw-daily" role="img" aria-label="Daily deposit withdraw">Daily dep/wd</canvas>
+            </div>
+          </div>
+        </div>
+
+        <!-- Deposit table -->
+        <div class="card" style="margin-bottom:14px">
+          <div class="card-title" style="margin-bottom:10px"><i data-lucide="arrow-down-circle"></i> รายการ Deposit</div>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>เวลา</th><th>User ID</th><th>สมาชิก</th><th>Account</th><th>Coin</th><th class="td-num">Amount (USDT)</th><th>Remark</th></tr></thead>
+              <tbody id="dep-tbody"><tr><td colspan="7"><div class="empty-box"><div class="empty-icon">📥</div>กำลังโหลด...</div></td></tr></tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Withdraw table -->
+        <div class="card">
+          <div class="card-title" style="margin-bottom:10px"><i data-lucide="arrow-up-circle"></i> รายการ Withdraw</div>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>เวลา</th><th>User ID</th><th>สมาชิก</th><th>Account</th><th>Coin</th><th class="td-num">Amount (USDT)</th><th>Remark</th></tr></thead>
+              <tbody id="wd-tbody"><tr><td colspan="7"><div class="empty-box"><div class="empty-icon">📤</div>กำลังโหลด...</div></td></tr></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- ══════ PAGE: MEMBERS (Admin only) ══════ -->
+      <div class="page" id="page-members">
+        <div style="display:flex;gap:14px;align-items:flex-start">
+          <div style="width:220px;flex-shrink:0">
+            <div class="card">
+              <div class="card-title"><i data-lucide="users"></i> สมาชิก</div>
+              <div id="member-list"></div>
+            </div>
+          </div>
+          <div style="flex:1"><div id="member-detail-area"><div class="empty-box"><div class="empty-icon">👈</div><div>เลือกสมาชิก</div></div></div></div>
+        </div>
+      </div>
+
+      <!-- ══════ PAGE: TRANSACTIONS ══════ -->
+      <div class="page" id="page-transactions">
+        <div class="filter-bar">
+          <select class="form-input" id="f-member" style="min-width:160px"><option value="">— สมาชิกทั้งหมด —</option></select>
+          <select class="form-input" id="f-op">
+            <option value="">— ประเภททั้งหมด —</option>
+            <option value="Realized Profit and Loss">Realized PnL</option>
+            <option value="Fee">Fee</option>
+            <option value="Funding Fee">Funding Fee</option>
+            <option value="Deposit">Deposit</option>
+            <option value="Withdraw">Withdraw</option>
+            <option value="Transfer Between Spot Account and UM Futures Account">Transfer</option>
+          </select>
+          <input type="date" class="form-input" id="f-date-from">
+          <input type="date" class="form-input" id="f-date-to">
+          <button class="btn btn-gold" onclick="applyFilter()"><i data-lucide="search"></i> ค้นหา</button>
+          <button class="btn btn-outline" onclick="resetFilter()"><i data-lucide="x"></i> รีเซ็ต</button>
+        </div>
+        <div id="tx-count-info" style="font-size:11px;color:var(--text-s);margin-bottom:10px"></div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>#</th><th>เวลา</th><th>User ID</th><th>สมาชิก</th><th>Account</th><th>ประเภท</th><th>Coin</th><th class="td-num">Change</th><th>Remark</th></tr></thead>
+            <tbody id="tx-tbody"><tr><td colspan="9"><div class="loading-box"><div class="spinner"></div></div></td></tr></tbody>
+          </table>
+        </div>
+        <div class="pagination">
+          <span id="tx-page-info" style="font-size:11px;color:var(--text-s)">—</span>
+          <div class="page-btns" id="tx-page-btns"></div>
+        </div>
+      </div>
+
+      <!-- ══════ PAGE: PnL ══════ -->
+      <div class="page" id="page-pnl">
+        <div class="stat-grid" style="grid-template-columns:repeat(4,1fr)">
+          <div class="stat-card green"><div class="stat-lbl">PnL รวม (บวก)</div><div class="stat-val green" id="p-pnl-pos">—</div><div class="stat-sub">USDT</div></div>
+          <div class="stat-card red"><div class="stat-lbl">PnL รวม (ลบ)</div><div class="stat-val red" id="p-pnl-neg">—</div><div class="stat-sub">USDT</div></div>
+          <div class="stat-card gold"><div class="stat-lbl">Net PnL</div><div class="stat-val" id="p-pnl-net">—</div><div class="stat-sub">USDT</div></div>
+          <div class="stat-card blue"><div class="stat-lbl">จำนวนรายการ</div><div class="stat-val blue" id="p-pnl-count">—</div><div class="stat-sub">รายการ</div></div>
+        </div>
+        <div class="card" style="margin-bottom:14px">
+          <div class="card-title"><i data-lucide="bar-chart-2"></i> Realized PnL รายวัน</div>
+          <div style="position:relative;width:100%;height:260px">
+            <canvas id="chart-pnl-daily" role="img" aria-label="Daily PnL">Daily PnL</canvas>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-title"><i data-lucide="list"></i> รายการ Realized PnL</div>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>เวลา</th><th>User ID</th><th>สมาชิก</th><th class="td-num">PnL (USDT)</th><th>TradeID</th></tr></thead>
+              <tbody id="pnl-tbody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- ══════ PAGE: FEES ══════ -->
+      <div class="page" id="page-fees">
+        <div class="stat-grid" style="grid-template-columns:repeat(3,1fr)">
+          <div class="stat-card red"><div class="stat-lbl">ค่าธรรมเนียมรวม</div><div class="stat-val red" id="f-total-fee">—</div><div class="stat-sub">USDT</div></div>
+          <div class="stat-card gold"><div class="stat-lbl">เฉลี่ย/รายการ</div><div class="stat-val gold" id="f-avg-fee">—</div><div class="stat-sub">USDT</div></div>
+          <div class="stat-card blue"><div class="stat-lbl">จำนวนรายการ</div><div class="stat-val blue" id="f-fee-count">—</div><div class="stat-sub">รายการ</div></div>
+        </div>
+        <div class="card" style="margin-bottom:14px">
+          <div class="card-title"><i data-lucide="bar-chart"></i> ค่าธรรมเนียมต่อสมาชิก</div>
+          <div style="position:relative;width:100%;height:220px">
+            <canvas id="chart-fee-member" role="img" aria-label="Fee per member">Fee per member</canvas>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-title"><i data-lucide="list"></i> รายการค่าธรรมเนียม</div>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>เวลา</th><th>User ID</th><th>สมาชิก</th><th>Account</th><th class="td-num">Fee (USDT)</th><th>TradeID</th></tr></thead>
+              <tbody id="fee-tbody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- ══════ PAGE: FUNDING ══════ -->
+      <div class="page" id="page-funding">
+        <div class="stat-grid" style="grid-template-columns:repeat(3,1fr)">
+          <div class="stat-card cyan"><div class="stat-lbl">Funding Fee รวม</div><div class="stat-val cyan" id="ff-total">—</div><div class="stat-sub">USDT</div></div>
+          <div class="stat-card green"><div class="stat-lbl">รวม (บวก)</div><div class="stat-val green" id="ff-pos">—</div><div class="stat-sub">USDT</div></div>
+          <div class="stat-card red"><div class="stat-lbl">รวม (ลบ)</div><div class="stat-val red" id="ff-neg">—</div><div class="stat-sub">USDT</div></div>
+        </div>
+        <div class="card" style="margin-bottom:14px">
+          <div class="card-title"><i data-lucide="clock"></i> Funding Fee Cumulative</div>
+          <div style="position:relative;width:100%;height:220px">
+            <canvas id="chart-funding-time" role="img" aria-label="Funding fee cumulative">Funding cumulative</canvas>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-title"><i data-lucide="list"></i> รายการ Funding Fee</div>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>เวลา</th><th>User ID</th><th>สมาชิก</th><th class="td-num">Amount (USDT)</th></tr></thead>
+              <tbody id="funding-tbody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- ══════ PAGE: PAYMENT ══════ -->
+      <div class="page" id="page-payment">
+        <!-- Search Box -->
+        <div class="pay-search-box">
+          <div class="pay-search-title"><i data-lucide="credit-card" style="width:16px;height:16px"></i> ค้นหาการจ่ายเงิน</div>
+          <div class="pay-search-row">
+            <input type="text" class="pay-search-input" id="pay-id-input" placeholder="🔍  กรอก ID ไบแนนซ์ TH (BNB-TH/ID) เช่น 11165856" onkeyup="if(event.key==='Enter')searchPayment()">
+            <button class="btn btn-gold" onclick="searchPayment()"><i data-lucide="search"></i> ค้นหา</button>
+            <button class="btn btn-outline" onclick="clearPaymentSearch()"><i data-lucide="x"></i> ล้าง</button>
+            <select class="form-input" id="pay-month-filter" onchange="filterPaymentList()" style="min-width:140px">
+              <option value="">— ทุกเดือน —</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Member Result Card (hidden by default) -->
+        <div id="pay-result-area"></div>
+
+        <!-- All Payment Records Table -->
+        <div class="card">
+          <div class="pay-all-table-header">
+            <div class="card-title" style="margin-bottom:0" id="pay-table-title"><i data-lucide="clock"></i> 📋 20 รายการล่าสุด <span style="font-size:10px;color:var(--text-s);font-weight:400">(กรองเพื่อดูทั้งหมด)</span></div>
+            <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+              <input type="text" class="form-input" id="pay-table-search" placeholder="ค้นหาชื่อ / ID / ทีม..." oninput="filterPaymentList()" style="min-width:180px">
+              <button class="btn btn-outline" onclick="resetPayFilter()" style="white-space:nowrap"><i data-lucide="rotate-ccw"></i> รีเซ็ต</button>
+              <span id="pay-table-count" style="font-size:11px;color:var(--text-s)"></span>
+            </div>
+          </div>
+          <div class="table-wrap" style="margin-top:12px">
+            <table>
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>ชื่อ</th>
+                  <th>BNB-TH/ID</th>
+                  <th>ทีม</th>
+                  <th>Level A</th>
+                  <th>Level B</th>
+                  <th>วันที่จ่าย</th>
+                  <th class="td-num">Payment</th>
+                  <th class="td-num">Total Profit</th>
+                  <th class="td-num">Commission</th>
+                  <th class="td-num">Profit Guarantee</th>
+                  <th class="td-num">Total Balance</th>
+                  <th class="td-num">Member</th>
+                  <th class="td-num">Central_Team</th>
+                  <th class="td-num">Total_Transfer</th>
+                  <th>Position</th>
+                </tr>
+              </thead>
+              <tbody id="pay-all-tbody">
+                <tr><td colspan="16"><div class="loading-box"><div class="spinner"></div> กำลังโหลด...</div></td></tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="pagination">
+            <span id="pay-page-info" style="font-size:11px;color:var(--text-s)">—</span>
+            <div class="page-btns" id="pay-page-btns"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ══════ PAGE: TEAM COMMISSION ══════ -->
+      <div class="page" id="page-teamcommission">
+        <!-- Overall Summary -->
+        <div class="stat-grid" style="grid-template-columns:repeat(4,1fr);margin-bottom:16px">
+          <div class="stat-card gold"><div class="stat-lbl">คอมมิชั่นรวมทั้งหมด</div><div class="stat-val gold" id="tc-total-comm">—</div><div class="stat-sub">USD</div></div>
+          <div class="stat-card green"><div class="stat-lbl">Total Profit รวม</div><div class="stat-val green" id="tc-total-profit">—</div><div class="stat-sub">USD</div></div>
+          <div class="stat-card blue"><div class="stat-lbl">Profit Guarantee รวม</div><div class="stat-val blue" id="tc-total-pg">—</div><div class="stat-sub">USD</div></div>
+          <div class="stat-card cyan"><div class="stat-lbl">จำนวนสมาชิกทั้งหมด</div><div class="stat-val cyan" id="tc-total-members">—</div><div class="stat-sub">ราย</div></div>
+        </div>
+
+        <!-- Month Filter -->
+        <div class="card" style="margin-bottom:14px">
+          <div class="card-title"><i data-lucide="calendar"></i> กรองตามเดือน</div>
+          <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+            <div class="team-month-tabs" id="tc-month-tabs">
+              <div class="team-month-tab active" onclick="selectTCMonth('')">ทั้งหมด</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Commission by Team Summary Cards -->
+        <div style="margin-bottom:14px">
+          <div style="font-size:11px;font-weight:700;color:var(--text-s);text-transform:uppercase;letter-spacing:.8px;margin-bottom:10px">สรุปคอมมิชั่นแต่ละทีม</div>
+          <div class="team-summary-grid" id="tc-team-cards"></div>
+        </div>
+
+        <!-- Charts Row -->
+        <div class="grid-2" style="margin-bottom:14px">
+          <div class="card">
+            <div class="card-title"><i data-lucide="bar-chart-2"></i> คอมมิชั่นแต่ละทีม</div>
+            <div style="position:relative;width:100%;height:220px">
+              <canvas id="chart-tc-team" role="img" aria-label="Commission by team"></canvas>
+            </div>
+          </div>
+          <div class="card">
+            <div class="card-title"><i data-lucide="trending-up"></i> คอมมิชั่นรายเดือน</div>
+            <div style="position:relative;width:100%;height:220px">
+              <canvas id="chart-tc-monthly" role="img" aria-label="Commission by month"></canvas>
+            </div>
+          </div>
+        </div>
+
+        <!-- Team Detail Table (shown when team selected) -->
+        <div id="tc-team-detail"></div>
+
+        <!-- Full Payment Table by selected month/team -->
+        <div class="card" style="margin-top:14px">
+          <div class="pay-all-table-header">
+            <div class="card-title" style="margin-bottom:0"><i data-lucide="list"></i> รายละเอียดการจ่ายทั้งหมด <span id="tc-filter-label" style="color:var(--gold);font-weight:700"></span></div>
+            <input type="text" class="form-input" id="tc-table-search" placeholder="ค้นหาชื่อ / ทีม..." oninput="renderTCTable()" style="min-width:180px">
+          </div>
+          <div class="table-wrap" style="margin-top:12px">
+            <table>
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>ชื่อ</th>
+                  <th>BNB-TH/ID</th>
+                  <th>ทีม</th>
+                  <th>Level A</th>
+                  <th>Level B</th>
+                  <th>วันที่</th>
+                  <th class="td-num">Commission</th>
+                  <th class="td-num">Total Profit</th>
+                  <th class="td-num">Profit Guarantee</th>
+                  <th class="td-num">Member</th>
+                  <th class="td-num">Central_Team</th>
+                  <th class="td-num">Total_Transfer</th>
+                  <th>Position</th>
+                </tr>
+              </thead>
+              <tbody id="tc-tbody">
+                <tr><td colspan="14"><div class="empty-box"><div class="empty-icon">📊</div>กำลังโหลดข้อมูล...</div></td></tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="pagination">
+            <span id="tc-page-info" style="font-size:11px;color:var(--text-s)">—</span>
+            <div class="page-btns" id="tc-page-btns"></div>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /content -->
+  </div><!-- /main -->
+</div><!-- /main-app -->
+
+<script>
+// ══════════════════════════════════════════
+// CONFIG
+// ══════════════════════════════════════════
+const SHEET_ID     = '1xXYsqlJJW939LJ9vNNT08Lgi-sFXjeJN';
+const GID_TX       = '962673848';
+const GID_MEMBER   = '2021555090';
+const GID_PAYMENT  = '1450422848';
+const TX_CSV_URL   = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv&gid=${GID_TX}`;
+const MEM_CSV_URL  = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv&gid=${GID_MEMBER}`;
+const PAY_CSV_URL  = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv&gid=${GID_PAYMENT}`;
+const ADMIN_PASS   = 'TCC2025Admin'; // ← เปลี่ยนได้
+
+// ══════════════════════════════════════════
+// STATE
+// ══════════════════════════════════════════
+let ALL_TX=[], ALL_MEMBERS=[], FILTERED_TX=[], chartInstances={}, txPage=1;
+const TX_PER_PAGE=50;
+let CURRENT_USER = null; // { uid, name, email, isAdmin }
+let VIEW_TX = []; // TX slice visible to current user
+let ALL_PAYMENT=[], FILTERED_PAYMENT=[], payPage=1, tcPage=1, selectedTCMonth='', selectedTCTeam='';
+const PAY_PER_PAGE=50;
+
+// ══════════════════════════════════════════
+// UTILS
+// ══════════════════════════════════════════
+function fmt(n,d=2){return Number(n||0).toLocaleString('en-US',{minimumFractionDigits:d,maximumFractionDigits:d});}
+function fmtN(n){return Number(n||0).toLocaleString('en-US',{minimumFractionDigits:0,maximumFractionDigits:0});}
+function fmtTok(n){const v=Math.abs(Number(n||0));const s=Number(n||0);return v>=1000?s.toLocaleString('en-US',{minimumFractionDigits:0,maximumFractionDigits:0}):s.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:4});}
+function colorNum(n){return Number(n)>=0?'var(--green)':'var(--red)';}
+function signFmt(n){const v=Number(n);return (v>0?'+':'')+fmt(v);}
+function esc(s){const d=document.createElement('div');d.textContent=s||'';return d.innerHTML;}
+function toast(msg,type='info'){
+  const t=document.createElement('div');t.className=`toast ${type}`;
+  const icons={success:'✅',error:'❌',info:'ℹ️',warn:'⚠️'};
+  t.innerHTML=`<span>${icons[type]||'ℹ️'}</span><span>${msg}</span>`;
+  document.getElementById('toasts').appendChild(t);
+  setTimeout(()=>t.remove(),3500);
+}
+function destroyChart(id){if(chartInstances[id]){chartInstances[id].destroy();delete chartInstances[id];}}
+const initials=name=>name.split(' ').map(w=>w[0]||'').join('').substring(0,2).toUpperCase()||'?';
+
+// ══════════════════════════════════════════
+// LOGIN LOGIC
+// ══════════════════════════════════════════
+let loginMode='member';
+function switchLoginMode(mode){
+  loginMode=mode;
+  document.getElementById('tab-member').classList.toggle('active',mode==='member');
+  document.getElementById('tab-admin').classList.toggle('active',mode==='admin');
+  document.getElementById('login-member-form').style.display=mode==='member'?'':'none';
+  document.getElementById('login-admin-form').style.display=mode==='admin'?'':'none';
+}
+
+function showErr(id,msg){const el=document.getElementById(id);el.textContent=msg;el.style.display='block';}
+function hideErr(id){document.getElementById(id).style.display='none';}
+
+async function memberLogin(){
+  const uid=(document.getElementById('m-uid').value||'').trim();
+  const email=(document.getElementById('m-email').value||'').trim().toLowerCase();
+  hideErr('m-login-err');
+  if(!uid||!email){showErr('m-login-err','กรุณากรอก User ID และอีเมล');return;}
+  const btn=document.getElementById('m-login-btn');
+  const sp=document.getElementById('m-login-spinner');
+  btn.disabled=true; sp.style.display='inline-flex';
+  // Load data first
+  if(!ALL_MEMBERS.length) await loadAll(true);
+  // Verify
+  const member=ALL_MEMBERS.find(m=>{
+    const muid=String(m['User ID']||m['User_ID']||'').trim();
+    const memail=(m['Email']||m['email']||'').trim().toLowerCase();
+    return muid===uid && memail===email;
+  });
+  btn.disabled=false; sp.style.display='none';
+  if(!member){
+    showErr('m-login-err','ไม่พบข้อมูล: User ID หรืออีเมลไม่ถูกต้อง กรุณาตรวจสอบอีกครั้ง');
+    return;
+  }
+  CURRENT_USER={uid, name:(member['Name']||'UID:'+uid).trim(), email:(member['Email']||'').trim(), isAdmin:false};
+  enterApp();
+}
+
+async function adminLogin(){
+  const pass=document.getElementById('a-pass').value;
+  hideErr('a-login-err');
+  if(pass!==ADMIN_PASS){showErr('a-login-err','รหัส Admin ไม่ถูกต้อง');return;}
+  const btn=document.getElementById('a-login-btn');
+  const sp=document.getElementById('a-login-spinner');
+  btn.disabled=true; sp.style.display='inline-flex';
+  if(!ALL_MEMBERS.length) await loadAll(true);
+  btn.disabled=false; sp.style.display='none';
+  CURRENT_USER={uid:'admin', name:'Administrator', email:'admin@tcc', isAdmin:true};
+  enterApp();
+}
+
+function enterApp(){
+  document.getElementById('login-screen').style.display='none';
+  document.getElementById('main-app').classList.add('visible');
+  // Show mobile nav
+  const mnav=document.getElementById('mobileNav');
+  if(mnav) mnav.style.display='';
+  // Set VIEW_TX
+  if(CURRENT_USER.isAdmin){
+    VIEW_TX=[...ALL_TX];
+  } else {
+    VIEW_TX=ALL_TX.filter(t=>String(t.userId).trim()===CURRENT_USER.uid);
+  }
+  // Update sidebar user badge
+  document.getElementById('sidebar-avatar').textContent=initials(CURRENT_USER.name);
+  document.getElementById('sidebar-name').textContent=CURRENT_USER.name;
+  document.getElementById('sidebar-role').textContent=CURRENT_USER.isAdmin?'🔐 Admin':'👤 สมาชิก';
+  // Show/hide admin nav
+  document.getElementById('admin-nav-section').style.display=CURRENT_USER.isAdmin?'':'none';
+  const burgerMembers=document.getElementById('burger-members-item');
+  if(burgerMembers) burgerMembers.style.display=CURRENT_USER.isAdmin?'':'none';
+  // Member banner
+  if(!CURRENT_USER.isAdmin){
+    ['member-banner','dw-member-banner'].forEach(id=>{
+      const el=document.getElementById(id); if(el) el.style.display='flex';
+    });
+    const av=initials(CURRENT_USER.name);
+    ['mb-avatar','dw-mb-avatar'].forEach(id=>{const el=document.getElementById(id);if(el)el.textContent=av;});
+    const setT=(id,v)=>{const el=document.getElementById(id);if(el)el.textContent=v;};
+    setT('mb-name',CURRENT_USER.name); setT('mb-email',CURRENT_USER.email); setT('mb-uid','UID: '+CURRENT_USER.uid);
+    setT('dw-mb-name',CURRENT_USER.name); setT('dw-mb-uid','UID: '+CURRENT_USER.uid);
+    // Hide member count stat
+    document.getElementById('sl-members').textContent='Account';
+    document.getElementById('s-members').textContent='1';
+    document.getElementById('ss-members').textContent='บัญชีของคุณ';
+    // Hide member filter in tx page
+    document.getElementById('f-member').style.display='none';
+  } else {
+    populateFilters();
+  }
+  lucide.createIcons();
+  setMNav('overview');
+  renderAll();
+}
+
+function doLogout(){
+  CURRENT_USER=null; VIEW_TX=[];
+  document.getElementById('main-app').classList.remove('visible');
+  document.getElementById('login-screen').style.display='flex';
+  // Hide mobile nav
+  const mnav=document.getElementById('mobileNav');
+  if(mnav) mnav.style.display='none';
+  document.getElementById('a-pass').value='';
+  document.getElementById('m-uid').value='';
+  document.getElementById('m-email').value='';
+  // reset charts
+  Object.keys(chartInstances).forEach(k=>{chartInstances[k].destroy();});
+  chartInstances={};
+  showPage('overview');
+}
+
+// ══════════════════════════════════════════
+// NAVIGATION
+// ══════════════════════════════════════════
+// ══════════════════════════════════════════
+// OPERATION HELPERS (Bug1 fix - robust matching)
+// ══════════════════════════════════════════
+function isPnL(op)     { return op==='Realized Profit and Loss'; }
+function isFee(op)     { return op==='Fee'; }
+function isFunding(op) { return op==='Funding Fee'; }
+function isDeposit(op) { return op==='Deposit'; }
+function isWithdraw(op){ return op==='Withdraw'; }
+function isTransfer(op){ return op.includes('Transfer'); }
+// ── External cash-flow helpers (Spot + USDT only = real USDT in/out) ──
+function isExtDep(r)   { return r.operation==='Deposit'  && r.account==='Spot' && r.coin==='USDT'; }
+function isExtWd(r)    { return r.operation==='Withdraw' && r.account==='Spot' && r.coin==='USDT'; }
+// ── Non-USDT token helper ──
+function getNonUSDTDW(txs){
+  const coins={};
+  txs.filter(r=>(isDeposit(r.operation)||isWithdraw(r.operation)) && r.coin!=='USDT' && r.account==='Spot')
+    .forEach(r=>{
+      if(!coins[r.coin]) coins[r.coin]={dep:0,wd:0,cnt:0};
+      if(isDeposit(r.operation)) coins[r.coin].dep+=r.change;
+      else coins[r.coin].wd+=r.change;
+      coins[r.coin].cnt++;
+    });
+  return coins;
+}
+
+const PAGE_TITLES={
+  overview:'📊 Dashboard',members:'👥 รายงานสมาชิก',
+  transactions:'📋 รายการทั้งหมด',pnl:'📈 Realized PnL',
+  fees:'💸 ค่าธรรมเนียม',funding:'⏰ Funding Fee',depwd:'💰 ฝาก / ถอน',
+  payment:'💳 การจ่ายเงิน',teamcommission:'🏆 คอมมิชั่นทีม'
+};
+function showPage(id){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+  const pg=document.getElementById('page-'+id);
+  if(!pg) return;
+  pg.classList.add('active');
+  document.querySelectorAll('.nav-item').forEach(n=>{
+    if(n.getAttribute('onclick')?.includes("'"+id+"'"))n.classList.add('active');
+  });
+  document.getElementById('page-title').textContent=PAGE_TITLES[id]||id;
+  setMNav(id);
+  if(!CURRENT_USER) return;
+  if(id==='pnl') renderPnLPage();
+  else if(id==='fees') renderFeesPage();
+  else if(id==='funding') renderFundingPage();
+  else if(id==='transactions') renderTransactionsPage();
+  else if(id==='members') renderMembersPage();
+  else if(id==='depwd') renderDepWdPage();
+  else if(id==='payment') renderPaymentPage();
+  else if(id==='teamcommission') renderTeamCommissionPage();
+}
+function setMNav(id){
+  document.querySelectorAll('.mnav-item').forEach(n=>n.classList.remove('active'));
+  // Map: fees/transactions/members → burger
+  const tabMap={fees:'burger',transactions:'burger',members:'burger'};
+  const tabId=tabMap[id]||id;
+  const el=document.getElementById('mn-'+tabId);
+  if(el) el.classList.add('active');
+}
+function toggleBurgerMenu(){
+  const panel=document.getElementById('burger-panel');
+  const overlay=document.getElementById('burger-overlay');
+  const open=panel.style.display==='block';
+  panel.style.display=open?'none':'block';
+  overlay.style.display=open?'none':'block';
+  lucide.createIcons();
+}
+function closeBurgerMenu(){
+  document.getElementById('burger-panel').style.display='none';
+  document.getElementById('burger-overlay').style.display='none';
+}
+
+// ══════════════════════════════════════════
+// CSV PARSER
+// ══════════════════════════════════════════
+function parseCSV(text){
+  // Strip BOM if present
+  text=text.replace(/^\uFEFF/,'');
+  const lines=text.trim().split(/\r?\n/);
+  if(lines.length<2) return [];
+  // Parse header row (handle quoted headers too)
+  const rawHdr=lines[0];
+  const headers=parseCSVLine(rawHdr).map(h=>h.replace(/^"|"$/g,'').trim());
+  const result = lines.slice(1).filter(l=>l.trim()).map(line=>{
+    const cols=parseCSVLine(line);
+    const obj={};
+    headers.forEach((h,i)=>{
+      let v=(cols[i]||'').trim();
+      if(v.startsWith('"')&&v.endsWith('"')) v=v.slice(1,-1);
+      obj[h]=v;
+    });
+    return obj;
+  });
+  return result;
+}
+function parseCSVLine(line){
+  const cols=[]; let cur=''; let inQ=false;
+  for(let i=0;i<line.length;i++){
+    const ch=line[i];
+    if(ch==='"'){
+      if(inQ && line[i+1]==='"'){cur+='"';i++;} // escaped quote
+      else inQ=!inQ;
+    } else if(ch===','&&!inQ){cols.push(cur.trim());cur='';}
+    else cur+=ch;
+  }
+  cols.push(cur.trim());
+  return cols;
+}
+
+// ══════════════════════════════════════════
+// LOAD DATA
+// ══════════════════════════════════════════
+async function loadAll(silent=false){
+  const btn=document.getElementById('refresh-btn');
+  const stat=document.getElementById('sync-status');
+  if(!silent){btn.disabled=true; stat.style.display='flex';}
+  try{
+    const [txRes,memRes,payRes]=await Promise.all([fetch(TX_CSV_URL),fetch(MEM_CSV_URL),fetch(PAY_CSV_URL)]);
+    if(!txRes.ok) throw new Error('TX fetch '+txRes.status);
+    if(!memRes.ok) throw new Error('Member fetch '+memRes.status);
+    ALL_MEMBERS=parseCSV(await memRes.text());
+    const rawTx=parseCSV(await txRes.text());
+    // Parse payment data (ignore GID fetch errors gracefully)
+    if(payRes.ok){
+      const rawPay=parseCSV(await payRes.text());
+      ALL_PAYMENT=rawPay.map(r=>{
+        const parseD=s=>s?parseFloat(String(s).replace(/[$,\s"]/g,''))||0:0;
+        const dateStr=(r['Payment']||r['payment']||r['Date']||r['date']||'').trim();
+        return{
+          name:(r['Name']||r['name']||'').trim(),
+          bnbId:String(r['BNB-TH/ID']||r['BNB_TH_ID']||r['bnb_id']||r['ID']||'').trim(),
+          team:(r['Team']||r['team']||'').trim(),
+          levelA:(r['Level A']||r['LevelA']||r['level_a']||'').trim(),
+          levelB:(r['Level B']||r['LevelB']||r['level_b']||'').trim(),
+          payment:dateStr,
+          totalProfit:parseD(r['Total Profit']||r['TotalProfit']||r['total_profit']),
+          commission:parseD(r['Commission']||r['commission']),
+          profitGuarantee:parseD(r['Profit Guarantee']||r['ProfitGuarantee']||r['profit_guarantee']),
+          totalBalance:parseD(r['Total Balance']||r['TotalBalance']||r['total_balance']),
+          member:parseD(r['Member']||r['member']),
+          centralTeam:parseD(r['Central_Team']||r['CentralTeam']||r['central_team']),
+          totalTransfer:parseD(r['Total_Tranfer']||r['Total_Transfer']||r['TotalTransfer']||r['total_transfer']),
+          position:(r['Position']||r['position']||'').trim(),
+          // Extract month for filtering: try to parse date string
+          month:parsePayMonth(dateStr)
+        };
+      }).filter(r=>r.name||r.bnbId);
+      FILTERED_PAYMENT=[...ALL_PAYMENT];
+      populatePayMonthFilter();
+      populateTCMonthTabs();
+    }
+    const mMap={};
+    ALL_MEMBERS.forEach(m=>{
+      const uid=String(m['User ID']||m['User_ID']||m['uid']||'').trim();
+      mMap[uid]={name:(m['Name']||m['name']||'—').trim(),email:(m['Email']||m['email']||'').trim()};
+    });
+    ALL_TX=rawTx.map(r=>{
+      // Support both "User ID" and "User_ID" (Binance export format)
+      const uid=String(r['User ID']||r['User_ID']||r['user_id']||r['userid']||'').trim();
+      // Support both "Time" and "UTC_Time" (Binance export format)
+      const timeVal=(r['Time']||r['UTC_Time']||r['time']||r['utc_time']||'').trim();
+      // Trim whitespace/newline from operation
+      const op=(r['Operation']||r['operation']||'').trim().replace(/\s+/g,' ');
+      // Remove commas before parseFloat e.g. "14,800" → 14800, strip quotes too
+      const rawChange=String(r['Change']||r['change']||'0').replace(/[,"]/g,'').trim();
+      const changeVal=parseFloat(rawChange);
+      return{
+        userId:uid,
+        time:timeVal,
+        account:(r['Account']||r['account']||'').trim(),
+        operation:op,
+        coin:(r['Coin']||r['coin']||'USDT').trim(),
+        change:isNaN(changeVal)?0:changeVal,
+        remark:(r['Remark']||r['remark']||'').trim(),
+        memberName:mMap[uid]?.name||'UID:'+uid,
+        memberEmail:mMap[uid]?.email||''
+      };
+    });
+    FILTERED_TX=[...ALL_TX];
+    const el=document.getElementById('last-updated');
+    if(el) el.textContent='อัปเดต: '+new Date().toLocaleTimeString('th');
+    if(!silent) toast(`โหลดสำเร็จ: ${ALL_TX.length} รายการ, ${ALL_PAYMENT.length} Payment`,'success');
+  }catch(e){
+    if(!silent) toast('โหลดไม่สำเร็จ: '+e.message,'error');
+    throw e;
+  }finally{
+    if(!silent){btn.disabled=false; stat.style.display='none';}
+  }
+}
+
+function renderAll(){
+  renderOverview();
+  renderDepWdPage();
+  // Force chart resize after layout settles (fixes desktop blank chart bug)
+  setTimeout(()=>{
+    Object.values(chartInstances).forEach(c=>{ try{ c.resize(); }catch(e){} });
+  }, 100);
+}
+
+// ══════════════════════════════════════════
+// OVERVIEW
+// ══════════════════════════════════════════
+function renderOverview(){
+  const tx=VIEW_TX;
+  if(!CURRENT_USER?.isAdmin) {/* member count already set in enterApp */}
+  else document.getElementById('s-members').textContent=fmtN(ALL_MEMBERS.length);
+  document.getElementById('s-txcount').textContent=fmtN(tx.length);
+  const pnl=tx.filter(r=>isPnL(r.operation)).reduce((a,b)=>a+b.change,0);
+  const fees=tx.filter(r=>isFee(r.operation)).reduce((a,b)=>a+b.change,0);
+  const fund=tx.filter(r=>isFunding(r.operation)).reduce((a,b)=>a+b.change,0);
+  const pEl=document.getElementById('s-pnl');
+  pEl.textContent=signFmt(pnl)+' USDT'; pEl.style.color=colorNum(pnl);
+  document.getElementById('s-fees').textContent=fmt(fees)+' USDT';
+  const fEl=document.getElementById('s-funding');
+  fEl.textContent=signFmt(fund)+' USDT'; fEl.style.color=colorNum(fund);
+  // Recent transactions
+  const recent=tx.slice(-20).reverse();
+  const tbody=document.getElementById('recent-tbody');
+  tbody.innerHTML=recent.length===0
+    ?'<tr><td colspan="6"><div class="empty-box">ไม่มีข้อมูล</div></td></tr>'
+    :recent.map(r=>{
+      const isUSDT=r.coin==='USDT';
+      return `<tr style="${isUSDT?'':'opacity:.72'}">
+        <td style="font-size:11px;color:var(--text-s);white-space:nowrap">${esc(r.time.substring(0,16))}</td>
+        <td style="font-size:12px">${esc(r.memberName)}</td>
+        <td>${opBadge(r.operation)}</td>
+        <td style="font-size:11px;color:var(--text-s)">${esc(r.account)}</td>
+        <td><span class="coin-tag">${esc(r.coin)}</span></td>
+        <td class="td-num" style="color:${colorNum(r.change)}">${signFmt(r.change)}${isUSDT?'':' <span style="font-size:9px;color:var(--text-s)">tok</span>'}</td>
+      </tr>`;}).join('');
+  chartMemberPnL(tx); chartOpPie(tx); chartPnLTime(tx);
+  if(CURRENT_USER?.isAdmin) renderDiagnostics(tx);
+}
+
+// ══════════════════════════════════════════
+// ADMIN DIAGNOSTICS
+// ══════════════════════════════════════════
+function renderDiagnostics(tx){
+  const diagCard=document.getElementById('admin-diag-card');
+  if(!diagCard) return;
+  diagCard.style.display='';
+
+  // Top 10 deposits by absolute value (Spot only)
+  const depTx=tx.filter(r=>isExtDep(r)).sort((a,b)=>b.change-a.change).slice(0,10);
+  document.getElementById('diag-top-dep').innerHTML=depTx.length===0
+    ?'<span style="color:var(--text-s)">ไม่มีข้อมูล</span>'
+    :depTx.map(r=>`<div style="display:flex;justify-content:space-between;padding:3px 0;border-bottom:1px solid var(--border)">
+      <div><span style="color:var(--blue)">${esc(r.memberName)}</span><span style="color:var(--text-s);font-size:10px;margin-left:4px">[${esc(r.coin)}]</span></div>
+      <span style="color:var(--green);font-family:var(--font-m)">+${fmt(r.change)}</span>
+    </div>`).join('');
+
+  // Top 10 withdrawals by absolute value (Spot only)
+  const wdTx=tx.filter(r=>isExtWd(r)).sort((a,b)=>a.change-b.change).slice(0,10);
+  document.getElementById('diag-top-wd').innerHTML=wdTx.length===0
+    ?'<span style="color:var(--text-s)">ไม่มีข้อมูล</span>'
+    :wdTx.map(r=>`<div style="display:flex;justify-content:space-between;padding:3px 0;border-bottom:1px solid var(--border)">
+      <div><span style="color:var(--blue)">${esc(r.memberName)}</span><span style="color:var(--text-s);font-size:10px;margin-left:4px">[${esc(r.coin)}]</span></div>
+      <span style="color:var(--red);font-family:var(--font-m)">${fmt(r.change)}</span>
+    </div>`).join('');
+
+  // Coin breakdown — all Spot dep/wd grouped by coin
+  const coinMap={};
+  tx.filter(r=>(isDeposit(r.operation)||isWithdraw(r.operation))&&r.account==='Spot').forEach(r=>{
+    if(!coinMap[r.coin]) coinMap[r.coin]={dep:0,wd:0,cnt:0};
+    if(isDeposit(r.operation)) coinMap[r.coin].dep+=r.change;
+    else coinMap[r.coin].wd+=r.change;
+    coinMap[r.coin].cnt++;
+  });
+  const coinEl=document.getElementById('diag-coin-breakdown');
+  coinEl.innerHTML=Object.entries(coinMap)
+    .sort((a,b)=>(b[0]==='USDT'?1e15:Math.abs(b[1].dep)+Math.abs(b[1].wd))-(a[0]==='USDT'?1e15:Math.abs(a[1].dep)+Math.abs(a[1].wd)))
+    .map(([coin,v])=>{
+      const isUSDT=coin==='USDT';
+      return `<div style="background:var(--card);border:1px solid ${isUSDT?'rgba(34,197,94,.3)':'var(--border)'};border-radius:10px;padding:10px 13px;min-width:145px${isUSDT?';box-shadow:0 0 12px rgba(34,197,94,.08)':''}">
+        <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px">
+          <span class="coin-tag" style="font-size:11px">${esc(coin)}</span>
+          <span style="font-size:9px;color:var(--text-s)">${v.cnt} รายการ</span>
+          ${isUSDT?'<span style="font-size:9px;color:var(--green);font-weight:700">★</span>':''}
+        </div>
+        <div style="color:var(--green);font-size:11.5px;font-family:var(--font-m)">Dep: +${fmtTok(v.dep)}${isUSDT?' USDT':' tok'}</div>
+        <div style="color:var(--red);font-size:11.5px;font-family:var(--font-m);margin-top:2px">Wd: ${fmtTok(v.wd)}${isUSDT?' USDT':' tok'}</div>
+        ${!isUSDT?'<div style="font-size:9px;color:var(--text-s);margin-top:5px;font-style:italic">ไม่รวมในยอด USDT</div>':''}
+      </div>`;}).join('');
+
+  // Member breakdown (USDT only for Dep/Wd + non-USDT tokens listed separately)
+  const memMap={};
+  tx.filter(r=>isExtDep(r)||isExtWd(r)).forEach(r=>{
+    if(!memMap[r.memberName]) memMap[r.memberName]={dep:0,wd:0};
+    if(isExtDep(r)) memMap[r.memberName].dep+=r.change;
+    else memMap[r.memberName].wd+=r.change;
+  });
+  // collect non-USDT tokens per member
+  const memTokenMap={};
+  tx.filter(r=>(isDeposit(r.operation)||isWithdraw(r.operation))&&r.coin!=='USDT'&&r.account==='Spot').forEach(r=>{
+    if(!memTokenMap[r.memberName]) memTokenMap[r.memberName]={};
+    if(!memTokenMap[r.memberName][r.coin]) memTokenMap[r.memberName][r.coin]={dep:0,wd:0};
+    if(isDeposit(r.operation)) memTokenMap[r.memberName][r.coin].dep+=r.change;
+    else memTokenMap[r.memberName][r.coin].wd+=r.change;
+  });
+  const memEl=document.getElementById('diag-member-breakdown');
+  const sorted=Object.entries(memMap).sort((a,b)=>(b[1].dep+Math.abs(b[1].wd))-(a[1].dep+Math.abs(a[1].wd)));
+  memEl.innerHTML=`<table style="width:100%;border-collapse:collapse">
+    <thead><tr>
+      <th style="text-align:left;padding:5px 8px;font-size:10px;color:var(--text-s);border-bottom:1px solid var(--border)">สมาชิก</th>
+      <th style="text-align:right;padding:5px 8px;font-size:10px;color:var(--text-s);border-bottom:1px solid var(--border)">Deposit (USDT)</th>
+      <th style="text-align:right;padding:5px 8px;font-size:10px;color:var(--text-s);border-bottom:1px solid var(--border)">Withdraw (USDT)</th>
+      <th style="text-align:left;padding:5px 8px;font-size:10px;color:var(--text-s);border-bottom:1px solid var(--border)">Token อื่นๆ</th>
+    </tr></thead>
+    <tbody>${sorted.map(([name,v])=>{
+      const tokens=memTokenMap[name]||{};
+      const tokHTML=Object.entries(tokens).map(([c,tv])=>`<span style="font-size:9.5px;background:var(--surface);border:1px solid var(--border-l);border-radius:6px;padding:1px 6px;margin:1px;display:inline-block">
+        <span style="color:var(--cyan)">${esc(c)}</span>
+        ${tv.dep!==0?`<span style="color:var(--green)"> +${fmtTok(tv.dep)}</span>`:''}
+        ${tv.wd!==0?`<span style="color:var(--red)"> ${fmtTok(tv.wd)}</span>`:''}
+      </span>`).join('');
+      return `<tr style="border-bottom:1px solid rgba(255,255,255,.03)">
+        <td style="padding:5px 8px;color:var(--text);font-size:12px">${esc(name)}</td>
+        <td style="padding:5px 8px;color:var(--green);text-align:right;font-family:var(--font-m);font-size:12px">+${fmt(v.dep)}</td>
+        <td style="padding:5px 8px;color:var(--red);text-align:right;font-family:var(--font-m);font-size:12px">${fmt(v.wd)}</td>
+        <td style="padding:5px 8px;max-width:220px;line-height:1.6">${tokHTML||'<span style="color:var(--text-s);font-size:10px">—</span>'}</td>
+      </tr>`;}).join('')}
+    </tbody>
+  </table>`;
+}
+
+function opBadge(op){
+  let cls='badge-trans', label=op;
+  if(isPnL(op))       { cls='badge-rpnl'; label='Realized PnL'; }
+  else if(isFee(op))  { cls='badge-fee';  label='Fee'; }
+  else if(isFunding(op)){ cls='badge-fund'; label='Funding Fee'; }
+  else if(isDeposit(op)){ cls='badge-dep'; label='Deposit'; }
+  else if(isWithdraw(op)){ cls='badge-wd'; label='Withdraw'; }
+  else if(isTransfer(op)){ cls='badge-trans'; label='Transfer'; }
+  return `<span class="badge ${cls}">${esc(label)}</span>`;
+}
+
+function chartMemberPnL(tx){
+  destroyChart('chart-member-pnl');
+  const byM={};
+  tx.forEach(r=>{
+    if(!byM[r.memberName]) byM[r.memberName]={pnl:0,fee:0};
+    if(isPnL(r.operation)) byM[r.memberName].pnl+=r.change;
+    if(isFee(r.operation)) byM[r.memberName].fee+=r.change;
+  });
+  const labels=Object.keys(byM);
+  const net=labels.map(k=>Math.round((byM[k].pnl+byM[k].fee)*100)/100);
+  chartInstances['chart-member-pnl']=new Chart(document.getElementById('chart-member-pnl'),{
+    type:'bar',
+    data:{labels,datasets:[{label:'Net PnL',data:net,backgroundColor:net.map(v=>v>=0?'rgba(34,197,94,.75)':'rgba(248,113,113,.75)'),borderRadius:5}]},
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>signFmt(c.raw)+' USDT'}}},
+      scales:{x:{ticks:{color:'#6B9A8E',font:{size:10}},grid:{color:'rgba(22,53,69,.4)'}},y:{ticks:{color:'#6B9A8E',font:{size:10}},grid:{color:'rgba(22,53,69,.4)'}}}}
+  });
+}
+function chartOpPie(tx){
+  destroyChart('chart-op-pie');
+  const ops={pnl:0,fee:0,funding:0,deposit:0,withdraw:0,transfer:0,other:0};
+  tx.forEach(r=>{
+    if(isPnL(r.operation)) ops.pnl++;
+    else if(isFee(r.operation)) ops.fee++;
+    else if(isFunding(r.operation)) ops.funding++;
+    else if(isDeposit(r.operation)) ops.deposit++;
+    else if(isWithdraw(r.operation)) ops.withdraw++;
+    else if(isTransfer(r.operation)) ops.transfer++;
+    else ops.other++;
+  });
+  const labels=['Realized PnL','Fee','Funding Fee','Deposit','Withdraw','Transfer'];
+  const data=[ops.pnl,ops.fee,ops.funding,ops.deposit,ops.withdraw,ops.transfer];
+  const colors=['#F59E0B','#F87171','#06B6D4','#22C55E','#EF4444','#60A5FA','#A78BFA'];
+  document.getElementById('pie-legend').innerHTML=labels.map((l,i)=>`
+    <span style="display:flex;align-items:center;gap:5px">
+      <span style="width:9px;height:9px;border-radius:2px;background:${colors[i%colors.length]};flex-shrink:0"></span>
+      <span style="color:var(--text-s)">${l}</span>
+      <span style="color:var(--text);font-weight:600;margin-left:auto;padding-left:6px">${data[i]}</span>
+    </span>`).join('');
+  chartInstances['chart-op-pie']=new Chart(document.getElementById('chart-op-pie'),{
+    type:'doughnut',
+    data:{labels,datasets:[{data,backgroundColor:colors.slice(0,data.length),borderWidth:0,hoverOffset:6}]},
+    options:{responsive:true,maintainAspectRatio:false,cutout:'65%',plugins:{legend:{display:false}}}
+  });
+}
+function chartPnLTime(tx){
+  destroyChart('chart-pnl-time');
+  const pnlTx=tx.filter(r=>isPnL(r.operation)).sort((a,b)=>a.time.localeCompare(b.time));
+  let cum=0;
+  const labels=pnlTx.map(r=>r.time.substring(5,10));
+  const data=pnlTx.map(r=>{cum+=r.change;return Math.round(cum*100)/100;});
+  chartInstances['chart-pnl-time']=new Chart(document.getElementById('chart-pnl-time'),{
+    type:'line',
+    data:{labels,datasets:[{label:'Cumulative PnL',data,borderColor:'#22C55E',backgroundColor:'rgba(34,197,94,.08)',fill:true,tension:.3,pointRadius:0,borderWidth:1.5}]},
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false}},
+      scales:{x:{ticks:{color:'#6B9A8E',font:{size:9},maxTicksLimit:8,autoSkip:true},grid:{display:false}},y:{ticks:{color:'#6B9A8E',font:{size:10}},grid:{color:'rgba(22,53,69,.4)'}}}}
+  });
+}
+
+// ══════════════════════════════════════════
+// DEPOSIT / WITHDRAW PAGE
+// ══════════════════════════════════════════
+function renderDepWdPage(){
+  const tx=VIEW_TX;
+  const depTx=tx.filter(r=>isDeposit(r.operation));
+  const wdTx =tx.filter(r=>isWithdraw(r.operation));
+  const transTx=tx.filter(r=>isTransfer(r.operation));
+
+  // ── USDT-only totals (true external cash flow) ──
+  const depUSDT=tx.filter(r=>isExtDep(r));
+  const wdUSDT =tx.filter(r=>isExtWd(r));
+  const depTotal=depUSDT.reduce((a,b)=>a+b.change,0);
+  const wdTotal =wdUSDT.reduce((a,b)=>a+b.change,0);
+  const net=depTotal+wdTotal;
+  const transTotal=transTx.reduce((a,b)=>a+b.change,0);
+
+  // Summary cards
+  document.getElementById('dw-dep').textContent='+'+fmt(depTotal)+' USDT';
+  document.getElementById('dw-dep-count').textContent=fmtN(depUSDT.length)+' รายการ (USDT)';
+  document.getElementById('dw-wd').textContent=fmt(wdTotal)+' USDT';
+  document.getElementById('dw-wd-count').textContent=fmtN(wdUSDT.length)+' รายการ (USDT)';
+  const netEl=document.getElementById('dw-net');
+  netEl.textContent=signFmt(net)+' USDT'; netEl.style.color=colorNum(net);
+  document.getElementById('dw-net-card').className='dw-card '+(net>=0?'net-pos':'net-neg');
+  document.getElementById('dw-trans').textContent=signFmt(transTotal)+' USDT';
+  document.getElementById('dw-trans-count').textContent=fmtN(transTx.length)+' รายการ';
+
+  // ── Non-USDT token section ──
+  const otherCoins=getNonUSDTDW(tx);
+  const otherEntries=Object.entries(otherCoins).sort((a,b)=>(Math.abs(b[1].dep)+Math.abs(b[1].wd))-(Math.abs(a[1].dep)+Math.abs(a[1].wd)));
+  const otherSec=document.getElementById('other-coins-section');
+  if(otherEntries.length>0){
+    otherSec.style.display='';
+    document.getElementById('other-coins-grid').innerHTML=otherEntries.map(([coin,v])=>`
+      <div style="background:var(--surface);border:1px solid var(--border-l);border-radius:14px;padding:14px 16px;min-width:155px">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:9px">
+          <span class="coin-tag" style="font-size:12px;padding:3px 10px">${esc(coin)}</span>
+          <span style="font-size:10px;color:var(--text-s)">${v.cnt} รายการ</span>
+        </div>
+        ${v.dep!==0?`<div style="font-size:12.5px;color:var(--green);font-family:var(--font-m);margin-bottom:3px">+${fmtTok(v.dep)} tok</div>`:''}
+        ${v.wd!==0?`<div style="font-size:12.5px;color:var(--red);font-family:var(--font-m)">${fmtTok(v.wd)} tok</div>`:''}
+        <div style="font-size:9px;color:var(--text-s);margin-top:6px;font-style:italic">ไม่รวมในยอด USDT</div>
+      </div>`).join('');
+  } else { otherSec.style.display='none'; }
+
+  // ── Table header: rename column ──
+  document.querySelector('#dep-tbody').closest('table').querySelector('th.td-num').textContent='Amount';
+
+  // ── Deposit table (all rows, USDT full, others dimmed + tok label) ──
+  document.getElementById('dep-tbody').innerHTML=depTx.length===0
+    ?'<tr><td colspan="7"><div class="empty-box"><div class="empty-icon">📥</div>ไม่มีรายการ Deposit</div></td></tr>'
+    :depTx.slice().reverse().map(r=>{
+      const isUSDT=r.coin==='USDT';
+      return `<tr style="${isUSDT?'':'opacity:.65;background:rgba(255,255,255,.02)'}">
+        <td style="font-size:11px;color:var(--text-s);white-space:nowrap">${esc(r.time.substring(0,16))}</td>
+        <td style="font-family:var(--font-m);font-size:11px;color:var(--blue)">${esc(r.userId)}</td>
+        <td style="font-size:12px">${esc(r.memberName)}</td>
+        <td style="font-size:11px;color:var(--text-s)">${esc(r.account)}</td>
+        <td><span class="coin-tag">${esc(r.coin)}</span></td>
+        <td class="td-num" style="color:var(--green)">+${fmtTok(r.change)}${isUSDT?'':' <span style="font-size:9px;color:var(--text-s)">tok</span>'}</td>
+        <td style="font-size:10px;color:var(--text-s)">${esc(r.remark)}</td>
+      </tr>`;}).join('');
+
+  // ── Withdraw table ──
+  document.getElementById('wd-tbody').innerHTML=wdTx.length===0
+    ?'<tr><td colspan="7"><div class="empty-box"><div class="empty-icon">📤</div>ไม่มีรายการ Withdraw</div></td></tr>'
+    :wdTx.slice().reverse().map(r=>{
+      const isUSDT=r.coin==='USDT';
+      return `<tr style="${isUSDT?'':'opacity:.65;background:rgba(255,255,255,.02)'}">
+        <td style="font-size:11px;color:var(--text-s);white-space:nowrap">${esc(r.time.substring(0,16))}</td>
+        <td style="font-family:var(--font-m);font-size:11px;color:var(--blue)">${esc(r.userId)}</td>
+        <td style="font-size:12px">${esc(r.memberName)}</td>
+        <td style="font-size:11px;color:var(--text-s)">${esc(r.account)}</td>
+        <td><span class="coin-tag">${esc(r.coin)}</span></td>
+        <td class="td-num" style="color:var(--red)">${fmtTok(r.change)}${isUSDT?'':' <span style="font-size:9px;color:var(--text-s)">tok</span>'}</td>
+        <td style="font-size:10px;color:var(--text-s)">${esc(r.remark)}</td>
+      </tr>`;}).join('');
+
+  // ── Chart: Dep vs Wd per member (USDT only) ──
+  destroyChart('chart-dw-member');
+  const byM={};
+  tx.filter(r=>isExtDep(r)||isExtWd(r)).forEach(r=>{
+    if(!byM[r.memberName]) byM[r.memberName]={dep:0,wd:0};
+    if(isExtDep(r)) byM[r.memberName].dep+=r.change;
+    else byM[r.memberName].wd+=Math.abs(r.change);
+  });
+  const mLabels=Object.keys(byM);
+  chartInstances['chart-dw-member']=new Chart(document.getElementById('chart-dw-member'),{
+    type:'bar',data:{labels:mLabels,datasets:[
+      {label:'Deposit (USDT)',data:mLabels.map(k=>+(byM[k].dep.toFixed(2))),backgroundColor:'rgba(34,197,94,.65)',borderRadius:4},
+      {label:'Withdraw (USDT)',data:mLabels.map(k=>-(byM[k].wd.toFixed(2))),backgroundColor:'rgba(248,113,113,.65)',borderRadius:4}
+    ]},options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:true,labels:{color:'#6B9A8E',font:{size:10},boxWidth:10,boxHeight:10}},
+        tooltip:{callbacks:{label:c=>c.dataset.label+': '+signFmt(c.raw)+' USDT'}}},
+      scales:{x:{ticks:{color:'#6B9A8E',font:{size:10}},grid:{color:'rgba(22,53,69,.4)'}},
+              y:{ticks:{color:'#6B9A8E',font:{size:10}},grid:{color:'rgba(22,53,69,.4)'}}}}}
+  );
+
+  // ── Chart: Daily dep/wd (USDT only) ──
+  destroyChart('chart-dw-daily');
+  const daily={};
+  tx.filter(r=>isExtDep(r)||isExtWd(r)).forEach(r=>{
+    const d=r.time.substring(0,10);
+    if(!daily[d]) daily[d]={dep:0,wd:0};
+    if(isExtDep(r)) daily[d].dep+=r.change;
+    else daily[d].wd+=Math.abs(r.change);
+  });
+  const dLabels=Object.keys(daily).sort();
+  chartInstances['chart-dw-daily']=new Chart(document.getElementById('chart-dw-daily'),{
+    type:'bar',data:{labels:dLabels,datasets:[
+      {label:'Deposit (USDT)',data:dLabels.map(d=>+(daily[d].dep.toFixed(2))),backgroundColor:'rgba(34,197,94,.6)',borderRadius:3},
+      {label:'Withdraw (USDT)',data:dLabels.map(d=>-(daily[d].wd.toFixed(2))),backgroundColor:'rgba(248,113,113,.6)',borderRadius:3}
+    ]},options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:true,labels:{color:'#6B9A8E',font:{size:10},boxWidth:10,boxHeight:10}},
+        tooltip:{callbacks:{label:c=>c.dataset.label+': '+signFmt(c.raw)+' USDT'}}},
+      scales:{x:{ticks:{color:'#6B9A8E',font:{size:9},maxTicksLimit:10,autoSkip:true},grid:{display:false}},
+              y:{ticks:{color:'#6B9A8E',font:{size:10}},grid:{color:'rgba(22,53,69,.4)'}}}}
+  });
+}
+
+// ══════════════════════════════════════════
+// TRANSACTIONS PAGE
+// ══════════════════════════════════════════
+function populateFilters(){
+  const sel=document.getElementById('f-member');
+  sel.innerHTML='<option value="">— สมาชิกทั้งหมด —</option>';
+  ALL_MEMBERS.forEach(m=>{
+    const uid=String(m['User ID']||'').trim();
+    const name=(m['Name']||'').trim();
+    sel.innerHTML+=`<option value="${esc(uid)}">${esc(name)} (${esc(uid)})</option>`;
+  });
+}
+function applyFilter(){
+  const member=document.getElementById('f-member').value;
+  const op=document.getElementById('f-op').value;
+  const from=document.getElementById('f-date-from').value;
+  const to=document.getElementById('f-date-to').value;
+  const base=CURRENT_USER?.isAdmin?ALL_TX:VIEW_TX;
+  FILTERED_TX=base.filter(r=>{
+    if(member&&r.userId!==member) return false;
+    if(op&&r.operation!==op) return false;
+    if(from&&r.time<from) return false;
+    if(to&&r.time>to+'z') return false;
+    return true;
+  });
+  txPage=1; renderTransactionsTable();
+}
+function resetFilter(){
+  ['f-member','f-op'].forEach(id=>document.getElementById(id).value='');
+  ['f-date-from','f-date-to'].forEach(id=>document.getElementById(id).value='');
+  FILTERED_TX=CURRENT_USER?.isAdmin?[...ALL_TX]:[...VIEW_TX];
+  txPage=1; renderTransactionsTable();
+}
+function renderTransactionsPage(){
+  FILTERED_TX=CURRENT_USER?.isAdmin?[...ALL_TX]:[...VIEW_TX];
+  renderTransactionsTable();
+}
+function renderTransactionsTable(){
+  const total=FILTERED_TX.length;
+  const pages=Math.ceil(total/TX_PER_PAGE);
+  const start=(txPage-1)*TX_PER_PAGE;
+  const slice=FILTERED_TX.slice(start,start+TX_PER_PAGE);
+  document.getElementById('tx-count-info').textContent=total>0?`แสดง ${start+1}–${Math.min(start+TX_PER_PAGE,total)} จาก ${fmtN(total)} รายการ`:'';
+  const tbody=document.getElementById('tx-tbody');
+  tbody.innerHTML=slice.length===0
+    ?'<tr><td colspan="9"><div class="empty-box"><div class="empty-icon">🔍</div>ไม่พบรายการ</div></td></tr>'
+    :slice.map((r,i)=>{
+      const isUSDT=r.coin==='USDT';
+      return `<tr style="${isUSDT?'':'opacity:.7'}">
+        <td style="color:var(--text-s)">${start+i+1}</td>
+        <td style="font-size:11px;color:var(--text-s);white-space:nowrap">${esc(r.time)}</td>
+        <td style="font-family:var(--font-m);font-size:11px;color:var(--blue)">${esc(r.userId)}</td>
+        <td style="font-size:12px">${esc(r.memberName)}</td>
+        <td style="font-size:11px;color:var(--text-s)">${esc(r.account)}</td>
+        <td>${opBadge(r.operation)}</td>
+        <td><span class="coin-tag">${esc(r.coin)}</span></td>
+        <td class="td-num" style="color:${colorNum(r.change)}">${signFmt(r.change)}${isUSDT?'':' <span style="font-size:9px;color:var(--text-s)">tok</span>'}</td>
+        <td style="font-size:10px;color:var(--text-s);max-width:110px;overflow:hidden;text-overflow:ellipsis">${esc(r.remark)}</td>
+      </tr>`;}).join('');
+  renderTxPagination(txPage,pages);
+}
+function renderTxPagination(cur,total){
+  document.getElementById('tx-page-info').textContent=total>0?`หน้า ${cur}/${total}`:'';
+  const btns=document.getElementById('tx-page-btns');
+  if(total<=1){btns.innerHTML='';return;}
+  let html=`<button class="pg-btn" ${cur<=1?'disabled':''} onclick="txGo(${cur-1})">‹</button>`;
+  const s=Math.max(1,cur-2),e=Math.min(total,cur+2);
+  if(s>1) html+=`<button class="pg-btn" onclick="txGo(1)">1</button>${s>2?'<span style="color:var(--text-d);padding:0 3px">…</span>':''}`;
+  for(let p=s;p<=e;p++) html+=`<button class="pg-btn ${p===cur?'active':''}" onclick="txGo(${p})">${p}</button>`;
+  if(e<total) html+=`${e<total-1?'<span style="color:var(--text-d);padding:0 3px">…</span>':''}<button class="pg-btn" onclick="txGo(${total})">${total}</button>`;
+  html+=`<button class="pg-btn" ${cur>=total?'disabled':''} onclick="txGo(${cur+1})">›</button>`;
+  btns.innerHTML=html;
+}
+function txGo(p){txPage=p;renderTransactionsTable();document.querySelector('.main').scrollTop=0;}
+
+// ══════════════════════════════════════════
+// PNL PAGE
+// ══════════════════════════════════════════
+function renderPnLPage(){
+  const pnlTx=VIEW_TX.filter(r=>isPnL(r.operation));
+  const pos=pnlTx.filter(r=>r.change>=0).reduce((a,b)=>a+b.change,0);
+  const neg=pnlTx.filter(r=>r.change<0).reduce((a,b)=>a+b.change,0);
+  const net=pos+neg;
+  document.getElementById('p-pnl-pos').textContent='+'+fmt(pos);
+  document.getElementById('p-pnl-neg').textContent=fmt(neg);
+  const nEl=document.getElementById('p-pnl-net'); nEl.textContent=signFmt(net); nEl.style.color=colorNum(net);
+  document.getElementById('p-pnl-count').textContent=fmtN(pnlTx.length);
+  document.getElementById('pnl-tbody').innerHTML=pnlTx.slice().reverse().slice(0,100).map(r=>`<tr>
+    <td style="font-size:11px;color:var(--text-s)">${esc(r.time)}</td>
+    <td style="font-family:var(--font-m);font-size:11px;color:var(--blue)">${esc(r.userId)}</td>
+    <td>${esc(r.memberName)}</td>
+    <td class="td-num" style="color:${colorNum(r.change)}">${signFmt(r.change)}</td>
+    <td style="font-size:10px;color:var(--text-s)">${esc(r.remark)}</td>
+  </tr>`).join('');
+  destroyChart('chart-pnl-daily');
+  const daily={};
+  pnlTx.forEach(r=>{const d=r.time.substring(0,10);daily[d]=(daily[d]||0)+r.change;});
+  const labels=Object.keys(daily).sort();
+  const data=labels.map(d=>Math.round(daily[d]*100)/100);
+  chartInstances['chart-pnl-daily']=new Chart(document.getElementById('chart-pnl-daily'),{
+    type:'bar',
+    data:{labels,datasets:[{label:'Daily PnL',data,backgroundColor:data.map(v=>v>=0?'rgba(34,197,94,.7)':'rgba(248,113,113,.7)'),borderRadius:4}]},
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>signFmt(c.raw)+' USDT'}}},
+      scales:{x:{ticks:{color:'#6B9A8E',font:{size:10},maxTicksLimit:12,autoSkip:true},grid:{display:false}},y:{ticks:{color:'#6B9A8E',font:{size:10}},grid:{color:'rgba(22,53,69,.4)'}}}}
+  });
+}
+
+// ══════════════════════════════════════════
+// FEES PAGE
+// ══════════════════════════════════════════
+function renderFeesPage(){
+  const feeTx=VIEW_TX.filter(r=>isFee(r.operation));
+  const total=feeTx.reduce((a,b)=>a+b.change,0);
+  document.getElementById('f-total-fee').textContent=fmt(total);
+  document.getElementById('f-avg-fee').textContent=fmt(feeTx.length?total/feeTx.length:0);
+  document.getElementById('f-fee-count').textContent=fmtN(feeTx.length);
+  document.getElementById('fee-tbody').innerHTML=feeTx.slice().reverse().slice(0,100).map(r=>`<tr>
+    <td style="font-size:11px;color:var(--text-s)">${esc(r.time)}</td>
+    <td style="font-family:var(--font-m);font-size:11px;color:var(--blue)">${esc(r.userId)}</td>
+    <td>${esc(r.memberName)}</td>
+    <td style="font-size:11px;color:var(--text-s)">${esc(r.account)}</td>
+    <td class="td-num" style="color:var(--red)">${fmt(r.change)}</td>
+    <td style="font-size:10px;color:var(--text-s)">${esc(r.remark)}</td>
+  </tr>`).join('');
+  destroyChart('chart-fee-member');
+  const byM={};
+  feeTx.forEach(r=>{byM[r.memberName]=(byM[r.memberName]||0)+r.change;});
+  const ml=Object.keys(byM), md=ml.map(k=>Math.round(byM[k]*100)/100);
+  chartInstances['chart-fee-member']=new Chart(document.getElementById('chart-fee-member'),{
+    type:'bar',
+    data:{labels:ml,datasets:[{label:'Fee (USDT)',data:md,backgroundColor:'rgba(248,113,113,.65)',borderRadius:5}]},
+    options:{responsive:true,maintainAspectRatio:false,indexAxis:'y',
+      plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>fmt(c.raw)+' USDT'}}},
+      scales:{x:{ticks:{color:'#6B9A8E',font:{size:10}},grid:{color:'rgba(22,53,69,.4)'}},y:{ticks:{color:'#6B9A8E',font:{size:10}},grid:{display:false}}}}
+  });
+}
+
+// ══════════════════════════════════════════
+// FUNDING PAGE
+// ══════════════════════════════════════════
+function renderFundingPage(){
+  const fundTx=VIEW_TX.filter(r=>isFunding(r.operation)).sort((a,b)=>a.time.localeCompare(b.time));
+  const total=fundTx.reduce((a,b)=>a+b.change,0);
+  const ftEl=document.getElementById('ff-total'); ftEl.textContent=signFmt(total)+' USDT'; ftEl.style.color=colorNum(total);
+  document.getElementById('ff-pos').textContent='+'+fmt(fundTx.filter(r=>r.change>=0).reduce((a,b)=>a+b.change,0))+' USDT';
+  document.getElementById('ff-neg').textContent=fmt(fundTx.filter(r=>r.change<0).reduce((a,b)=>a+b.change,0))+' USDT';
+  document.getElementById('funding-tbody').innerHTML=fundTx.slice().reverse().slice(0,100).map(r=>`<tr>
+    <td style="font-size:11px;color:var(--text-s)">${esc(r.time)}</td>
+    <td style="font-family:var(--font-m);font-size:11px;color:var(--blue)">${esc(r.userId)}</td>
+    <td>${esc(r.memberName)}</td>
+    <td class="td-num" style="color:${colorNum(r.change)}">${signFmt(r.change)}</td>
+  </tr>`).join('');
+  destroyChart('chart-funding-time');
+  let cum=0;
+  chartInstances['chart-funding-time']=new Chart(document.getElementById('chart-funding-time'),{
+    type:'line',
+    data:{labels:fundTx.map(r=>r.time.substring(5,10)),datasets:[{label:'Cumulative Funding',data:fundTx.map(r=>{cum+=r.change;return Math.round(cum*1000)/1000;}),borderColor:'#06B6D4',backgroundColor:'rgba(6,182,212,.07)',fill:true,tension:.3,pointRadius:0,borderWidth:1.5}]},
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false}},
+      scales:{x:{ticks:{color:'#6B9A8E',font:{size:9},maxTicksLimit:10,autoSkip:true},grid:{display:false}},y:{ticks:{color:'#6B9A8E',font:{size:10}},grid:{color:'rgba(22,53,69,.4)'}}}}
+  });
+}
+
+// ══════════════════════════════════════════
+// MEMBERS PAGE (Admin only)
+// ══════════════════════════════════════════
+let selectedMember=null;
+function renderMembersPage(){
+  if(!CURRENT_USER?.isAdmin){showPage('overview');return;}
+  const list=document.getElementById('member-list');
+  list.innerHTML=ALL_MEMBERS.map(m=>{
+    const uid=String(m['User ID']||'').trim();
+    const name=(m['Name']||'UID:'+uid).trim();
+    return `<div class="member-row ${selectedMember===uid?'selected':''}" onclick="selectMember('${esc(uid)}')">
+      <div class="member-avatar">${esc(initials(name))}</div>
+      <div>
+        <div style="font-size:12px;font-weight:600;color:var(--text)">${esc(name.split(' ')[0])}</div>
+        <div style="font-size:10px;color:var(--text-s)">${esc(uid)}</div>
+      </div>
+    </div>`;
+  }).join('');
+}
+function selectMember(uid){
+  selectedMember=uid;
+  renderMembersPage();
+  const member=ALL_MEMBERS.find(m=>String(m['User ID']||'').trim()===uid);
+  const txs=ALL_TX.filter(r=>String(r.userId).trim()===uid);
+
+  // ── USDT-only financials ──
+  const pnl =txs.filter(r=>isPnL(r.operation)).reduce((a,b)=>a+b.change,0);
+  const fee =txs.filter(r=>isFee(r.operation)).reduce((a,b)=>a+b.change,0);
+  const fund=txs.filter(r=>isFunding(r.operation)).reduce((a,b)=>a+b.change,0);
+  const dep =txs.filter(r=>isExtDep(r)).reduce((a,b)=>a+b.change,0);
+  const wd  =txs.filter(r=>isExtWd(r)).reduce((a,b)=>a+b.change,0);
+  const net =pnl+fee+fund;
+
+  // ── Non-USDT token breakdown for this member ──
+  const otherCoins=getNonUSDTDW(txs);
+  const otherEntries=Object.entries(otherCoins).sort((a,b)=>(Math.abs(b[1].dep)+Math.abs(b[1].wd))-(Math.abs(a[1].dep)+Math.abs(a[1].wd)));
+  const otherHTML=otherEntries.length===0?'':`
+    <div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--border)">
+      <div style="font-size:10px;color:var(--text-s);text-transform:uppercase;letter-spacing:.7px;margin-bottom:8px;font-weight:700">🪙 Token อื่นๆ (จำนวน Token — ไม่รวมในยอด USDT)</div>
+      <div style="display:flex;flex-wrap:wrap;gap:8px">
+        ${otherEntries.map(([coin,v])=>`
+          <div style="background:var(--surface);border:1px solid var(--border-l);border-radius:10px;padding:9px 12px;min-width:130px">
+            <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px">
+              <span class="coin-tag" style="font-size:11px;padding:2px 8px">${esc(coin)}</span>
+              <span style="font-size:9px;color:var(--text-s)">${v.cnt} รายการ</span>
+            </div>
+            ${v.dep!==0?`<div style="font-size:12px;color:var(--green);font-family:var(--font-m)">+${fmtTok(v.dep)}</div>`:''}
+            ${v.wd!==0?`<div style="font-size:12px;color:var(--red);font-family:var(--font-m)">${fmtTok(v.wd)}</div>`:''}
+          </div>`).join('')}
+      </div>
+    </div>`;
+
+  const name=(member?.['Name']||'UID:'+uid).trim();
+  const area=document.getElementById('member-detail-area');
+  area.innerHTML=`
+    <div class="card" style="margin-bottom:12px">
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px">
+        <div style="width:46px;height:46px;border-radius:50%;background:rgba(245,158,11,.15);border:1px solid rgba(245,158,11,.3);display:flex;align-items:center;justify-content:center;font-size:17px;font-weight:700;color:var(--gold);flex-shrink:0">${esc(initials(name))}</div>
+        <div>
+          <div style="font-family:var(--font-h);font-size:15px;font-weight:700">${esc(name)}</div>
+          <div style="font-size:11px;color:var(--text-s)">${esc(member?.['Email']||'')}</div>
+          <div style="font-size:10px;color:var(--blue);margin-top:2px;font-family:var(--font-m)">UID: ${esc(uid)}</div>
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:4px">
+        ${sm('Realized PnL',signFmt(pnl)+' USDT',colorNum(pnl))}
+        ${sm('ค่าธรรมเนียม',signFmt(fee)+' USDT','var(--red)')}
+        ${sm('Funding Fee',signFmt(fund)+' USDT',colorNum(fund))}
+        ${sm('Net PnL',signFmt(net)+' USDT',colorNum(net))}
+        ${sm('Deposit (USDT)','+'+fmt(dep)+' USDT','var(--green)')}
+        ${sm('Withdraw (USDT)',fmt(wd)+' USDT','var(--red)')}
+      </div>
+      ${otherHTML}
+    </div>
+    <div class="card">
+      <div class="card-title"><i data-lucide="list"></i> รายการล่าสุด (50 รายการ)</div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>เวลา</th><th>ประเภท</th><th>Account</th><th>Coin</th><th class="td-num">Change</th></tr></thead>
+          <tbody>${txs.slice(-50).reverse().map(r=>{
+            const isUSDT=r.coin==='USDT';
+            return `<tr style="${isUSDT?'':'opacity:.7'}">
+              <td style="font-size:11px;color:var(--text-s);white-space:nowrap">${esc(r.time.substring(0,16))}</td>
+              <td>${opBadge(r.operation)}</td>
+              <td style="font-size:11px;color:var(--text-s)">${esc(r.account)}</td>
+              <td><span class="coin-tag" style="font-size:10px;padding:2px 7px">${esc(r.coin)}</span></td>
+              <td class="td-num" style="color:${colorNum(r.change)}">${signFmt(r.change)}${isUSDT?'':' <span style="font-size:9px;color:var(--text-s)">tok</span>'}</td>
+            </tr>`;}).join('')}</tbody>
+        </table>
+      </div>
+    </div>`;
+  lucide.createIcons();
+}
+function sm(label,val,color){
+  return `<div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:11px 13px">
+    <div style="font-size:9.5px;color:var(--text-s);text-transform:uppercase;letter-spacing:.6px;margin-bottom:5px;font-weight:700">${label}</div>
+    <div style="font-family:var(--font-h);font-size:15px;font-weight:800;color:${color};letter-spacing:-.3px">${val}</div>
+  </div>`;
+}
+
+// ══════════════════════════════════════════
+// PAYMENT HELPERS
+// ══════════════════════════════════════════
+function parsePayMonth(dateStr){
+  if(!dateStr) return '';
+  const s=String(dateStr).trim();
+  // Format: D/M/YYYY or DD/MM/YYYY  →  group1=day, group2=month, group3=year
+  const m1=s.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/);
+  if(m1){ return `${m1[3]}-${String(m1[2]).padStart(2,'0')}`; }
+  // Format without anchors (date inside longer string)
+  const m1b=s.match(/(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})/);
+  if(m1b){ return `${m1b[3]}-${String(m1b[2]).padStart(2,'0')}`; }
+  // Format: YYYY-MM-DD
+  const m2=s.match(/(\d{4})[\/\-](\d{2})/);
+  if(m2){ return `${m2[1]}-${m2[2]}`; }
+  return '';
+}
+function fmtPay(n){ return '$'+Number(n||0).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2}); }
+function payMonthLabel(ym){
+  if(!ym) return 'ทั้งหมด';
+  const [y,m]=ym.split('-');
+  const months=['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
+  return `${months[parseInt(m,10)-1]} ${parseInt(y,10)+543}`;
+}
+function getUniquePayMonths(){
+  const s=new Set(ALL_PAYMENT.map(r=>r.month).filter(Boolean));
+  return [...s].sort();
+}
+function populatePayMonthFilter(){
+  const sel=document.getElementById('pay-month-filter');
+  if(!sel) return;
+  sel.innerHTML='<option value="">— ทุกเดือน —</option>';
+  getUniquePayMonths().forEach(ym=>{
+    sel.innerHTML+=`<option value="${ym}">${payMonthLabel(ym)}</option>`;
+  });
+}
+function populateTCMonthTabs(){
+  const container=document.getElementById('tc-month-tabs');
+  if(!container) return;
+  const months=getUniquePayMonths();
+  container.innerHTML=`<div class="team-month-tab active" onclick="selectTCMonth('')">ทั้งหมด</div>`;
+  months.forEach(ym=>{
+    container.innerHTML+=`<div class="team-month-tab" onclick="selectTCMonth('${ym}')">${payMonthLabel(ym)}</div>`;
+  });
+}
+
+// ══════════════════════════════════════════
+// PAYMENT PAGE FUNCTIONS
+// ══════════════════════════════════════════
+let payIsFiltered=false; // track if user has applied any filter
+
+function renderPaymentPage(){
+  // Only reset if not already filtered (first load)
+  if(!payIsFiltered){
+    FILTERED_PAYMENT=[...ALL_PAYMENT];
+    payPage=1;
+  }
+  renderPayAllTable();
+  // Sync dropdown to current state
+  const sel=document.getElementById('pay-month-filter');
+  // Don't reset dropdown value here — keep user's selection
+}
+
+function searchPayment(){
+  const q=(document.getElementById('pay-id-input').value||'').trim();
+  if(!q){ document.getElementById('pay-result-area').innerHTML=''; return; }
+  // Find by BNB-TH/ID or name
+  const rows=ALL_PAYMENT.filter(r=>r.bnbId===q||r.bnbId.includes(q)||r.name.toLowerCase().includes(q.toLowerCase()));
+  if(rows.length===0){
+    document.getElementById('pay-result-area').innerHTML=`<div class="card" style="margin-bottom:14px"><div class="empty-box"><div class="empty-icon">🔍</div>ไม่พบข้อมูลสำหรับ ID: <b>${esc(q)}</b></div></div>`;
+    return;
+  }
+  const first=rows[0];
+  // Aggregate all rows for this member
+  const totComm=rows.reduce((a,b)=>a+b.commission,0);
+  const totPay=rows.reduce((a,b)=>a+b.totalProfit,0);
+  const totPG=rows.reduce((a,b)=>a+b.profitGuarantee,0);
+  const totBal=rows.reduce((a,b)=>a+b.totalBalance,0);
+  const totMem=rows.reduce((a,b)=>a+b.member,0);
+  const totCT=rows.reduce((a,b)=>a+b.centralTeam,0);
+  const totTT=rows.reduce((a,b)=>a+b.totalTransfer,0);
+  const initials=first.name.split(' ').map(w=>w[0]||'').join('').substring(0,2).toUpperCase()||'?';
+  const area=document.getElementById('pay-result-area');
+  area.innerHTML=`
+    <div class="pay-result-card" style="margin-bottom:14px">
+      <div class="pay-member-header">
+        <div class="pay-member-avatar">${esc(initials)}</div>
+        <div style="flex:1">
+          <div class="pay-member-name">${esc(first.name)}</div>
+          <div class="pay-member-meta">ทีม: <b style="color:var(--gold)">${esc(first.team)||'—'}</b> &nbsp;|&nbsp; Level A: <b>${esc(first.levelA)||'—'}</b> &nbsp;|&nbsp; Level B: <b>${esc(first.levelB)||'—'}</b></div>
+          <div class="pay-member-id">BNB-TH/ID: ${esc(first.bnbId)}</div>
+        </div>
+        <div class="pay-pos-badge"><i data-lucide="shield-check" style="width:12px;height:12px"></i> ${esc(first.position)||'—'}</div>
+      </div>
+      <div class="pay-kpi-grid">
+        <div class="pay-kpi gold"><div class="pay-kpi-lbl">Commission รวม</div><div class="pay-kpi-val gold" style="color:var(--gold)">${fmtPay(totComm)}</div><div class="pay-kpi-sub">${rows.length} เดือน</div></div>
+        <div class="pay-kpi green"><div class="pay-kpi-lbl">Total Profit</div><div class="pay-kpi-val" style="color:var(--green)">${fmtPay(totPay)}</div><div class="pay-kpi-sub">USD</div></div>
+        <div class="pay-kpi blue"><div class="pay-kpi-lbl">Profit Guarantee</div><div class="pay-kpi-val" style="color:var(--blue)">${fmtPay(totPG)}</div><div class="pay-kpi-sub">USD</div></div>
+        <div class="pay-kpi cyan"><div class="pay-kpi-lbl">Total Balance</div><div class="pay-kpi-val" style="color:var(--cyan)">${fmtPay(totBal)}</div><div class="pay-kpi-sub">USD</div></div>
+        <div class="pay-kpi purple"><div class="pay-kpi-lbl">Member</div><div class="pay-kpi-val" style="color:var(--purple)">${fmtPay(totMem)}</div><div class="pay-kpi-sub">USD</div></div>
+        <div class="pay-kpi red"><div class="pay-kpi-lbl">Central Team</div><div class="pay-kpi-val" style="color:var(--red)">${fmtPay(totCT)}</div><div class="pay-kpi-sub">USD</div></div>
+      </div>
+      <div style="background:var(--surface);border:1px solid var(--border-l);border-radius:12px;padding:12px 14px;margin-bottom:14px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
+        <div style="font-size:11px;color:var(--text-s);text-transform:uppercase;font-weight:700;letter-spacing:.6px">Total Transfer รวม</div>
+        <div style="font-family:var(--font-h);font-size:20px;font-weight:800;color:var(--gold)">${fmtPay(totTT)}</div>
+      </div>
+      <div class="card-title" style="margin-bottom:8px"><i data-lucide="calendar"></i> ประวัติรายเดือน</div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>วันที่จ่าย</th><th class="td-num">Total Profit</th><th class="td-num">Commission</th><th class="td-num">Profit Guarantee</th><th class="td-num">Total Balance</th><th class="td-num">Member</th><th class="td-num">Central Team</th><th class="td-num">Total Transfer</th><th>Position</th></tr></thead>
+          <tbody>${rows.map(r=>`<tr>
+            <td style="font-size:12px;white-space:nowrap;color:var(--gold)">${esc(r.payment)}</td>
+            <td class="td-num" style="color:var(--green)">${fmtPay(r.totalProfit)}</td>
+            <td class="td-num" style="color:var(--gold);font-weight:700">${fmtPay(r.commission)}</td>
+            <td class="td-num" style="color:var(--blue)">${fmtPay(r.profitGuarantee)}</td>
+            <td class="td-num" style="color:var(--cyan)">${fmtPay(r.totalBalance)}</td>
+            <td class="td-num" style="color:var(--purple)">${fmtPay(r.member)}</td>
+            <td class="td-num" style="color:var(--text-s)">${fmtPay(r.centralTeam)}</td>
+            <td class="td-num" style="color:var(--gold);font-weight:800">${fmtPay(r.totalTransfer)}</td>
+            <td><span class="badge ${r.position==='Approve'?'badge-dep':'badge-wd'}">${esc(r.position)}</span></td>
+          </tr>`).join('')}</tbody>
+        </table>
+      </div>
+    </div>`;
+  lucide.createIcons();
+}
+
+function clearPaymentSearch(){
+  document.getElementById('pay-id-input').value='';
+  document.getElementById('pay-result-area').innerHTML='';
+  // Also reset table filter
+  resetPayFilter();
+}
+
+function resetPayFilter(){
+  const sel=document.getElementById('pay-month-filter');
+  if(sel) sel.value='';
+  const tSearch=document.getElementById('pay-table-search');
+  if(tSearch) tSearch.value='';
+  payIsFiltered=false;
+  FILTERED_PAYMENT=[...ALL_PAYMENT];
+  payPage=1;
+  renderPayAllTable();
+}
+
+function filterPaymentList(){
+  const month=(document.getElementById('pay-month-filter')?.value||'');
+  const q=(document.getElementById('pay-table-search')?.value||'').toLowerCase();
+  const hasFilter=!!(month||q);
+  payIsFiltered=hasFilter;
+  if(!hasFilter){
+    FILTERED_PAYMENT=[...ALL_PAYMENT];
+  } else {
+    FILTERED_PAYMENT=ALL_PAYMENT.filter(r=>{
+      if(month&&r.month!==month) return false;
+      if(q&&!r.name.toLowerCase().includes(q)&&!r.bnbId.includes(q)&&!r.team.toLowerCase().includes(q)) return false;
+      return true;
+    });
+  }
+  payPage=1;
+  renderPayAllTable();
+}
+
+function renderPayAllTable(){
+  // When not filtered: show only 20 latest records
+  let displayData=FILTERED_PAYMENT;
+  const isShowingAll=payIsFiltered;
+  if(!isShowingAll){
+    // Show last 20 rows (most recent = end of array)
+    displayData=ALL_PAYMENT.slice(-20).reverse();
+  }
+  const total=isShowingAll?FILTERED_PAYMENT.length:displayData.length;
+  const pages=isShowingAll?Math.ceil(FILTERED_PAYMENT.length/PAY_PER_PAGE)||1:1;
+  const start=isShowingAll?(payPage-1)*PAY_PER_PAGE:0;
+  const slice=isShowingAll?FILTERED_PAYMENT.slice(start,start+PAY_PER_PAGE):displayData;
+
+  // Update header label
+  const titleEl=document.getElementById('pay-table-title');
+  if(titleEl){
+    if(!isShowingAll){
+      titleEl.innerHTML=`<i data-lucide="clock"></i> 📋 20 รายการล่าสุด <span style="font-size:10px;color:var(--text-s);font-weight:400">(กรองเดือน/ค้นหา เพื่อดูทั้งหมด)</span>`;
+    } else {
+      titleEl.innerHTML=`<i data-lucide="list"></i> 📋 รายการทั้งหมด`;
+    }
+    lucide.createIcons();
+  }
+
+  const countEl=document.getElementById('pay-table-count');
+  if(countEl) countEl.textContent=isShowingAll?`${FILTERED_PAYMENT.length} รายการ`:`แสดง 20 ล่าสุด จาก ${ALL_PAYMENT.length} รายการ`;
+
+  const tbody=document.getElementById('pay-all-tbody');
+  if(!tbody) return;
+  tbody.innerHTML=slice.length===0
+    ?'<tr><td colspan="16"><div class="empty-box"><div class="empty-icon">🔍</div>ไม่พบรายการ</div></td></tr>'
+    :slice.map((r,i)=>`<tr>
+      <td style="color:var(--text-s)">${isShowingAll?start+i+1:i+1}</td>
+      <td style="font-size:12px;font-weight:600">${esc(r.name)||'—'}</td>
+      <td style="font-family:var(--font-m);font-size:11px;color:var(--blue)">${esc(r.bnbId)}</td>
+      <td style="font-size:11px;color:var(--gold)">${esc(r.team)||'—'}</td>
+      <td style="font-size:11px;color:var(--text-s)">${esc(r.levelA)||'—'}</td>
+      <td style="font-size:11px;color:var(--text-s)">${esc(r.levelB)||'—'}</td>
+      <td style="font-size:11px;white-space:nowrap">${esc(r.payment)}</td>
+      <td class="td-num" style="color:var(--green)">${fmtPay(r.totalProfit)}</td>
+      <td class="td-num" style="color:var(--gold);font-weight:700">${fmtPay(r.commission)}</td>
+      <td class="td-num" style="color:var(--blue)">${fmtPay(r.profitGuarantee)}</td>
+      <td class="td-num" style="color:var(--cyan)">${fmtPay(r.totalBalance)}</td>
+      <td class="td-num" style="color:var(--purple)">${fmtPay(r.member)}</td>
+      <td class="td-num" style="color:var(--text-s)">${fmtPay(r.centralTeam)}</td>
+      <td class="td-num" style="color:var(--gold);font-weight:800">${fmtPay(r.totalTransfer)}</td>
+      <td><span class="badge ${r.position==='Approve'?'badge-dep':'badge-wd'}">${esc(r.position)||'—'}</span></td>
+    </tr>`).join('');
+  // Pagination only when showing all
+  renderPayPagination(isShowingAll?payPage:1,isShowingAll?pages:1,'pay');
+}
+
+function renderPayPagination(cur,total,prefix){
+  const infoEl=document.getElementById(prefix+'-page-info');
+  const btnsEl=document.getElementById(prefix+'-page-btns');
+  if(infoEl) infoEl.textContent=total>0?`หน้า ${cur}/${total}`:'';
+  if(!btnsEl||total<=1){if(btnsEl)btnsEl.innerHTML='';return;}
+  let html=`<button class="pg-btn" ${cur<=1?'disabled':''} onclick="${prefix}Go(${cur-1})">‹</button>`;
+  const s=Math.max(1,cur-2),e=Math.min(total,cur+2);
+  if(s>1) html+=`<button class="pg-btn" onclick="${prefix}Go(1)">1</button>${s>2?'<span style="color:var(--text-d);padding:0 3px">…</span>':''}`;
+  for(let p=s;p<=e;p++) html+=`<button class="pg-btn ${p===cur?'active':''}" onclick="${prefix}Go(${p})">${p}</button>`;
+  if(e<total) html+=`${e<total-1?'<span style="color:var(--text-d);padding:0 3px">…</span>':''}<button class="pg-btn" onclick="${prefix}Go(${total})">${total}</button>`;
+  html+=`<button class="pg-btn" ${cur>=total?'disabled':''} onclick="${prefix}Go(${cur+1})">›</button>`;
+  btnsEl.innerHTML=html;
+}
+function payGo(p){payPage=p;renderPayAllTable();document.querySelector('.main').scrollTop=0;}
+
+// ══════════════════════════════════════════
+// TEAM COMMISSION FUNCTIONS
+// ══════════════════════════════════════════
+function renderTeamCommissionPage(){
+  selectedTCMonth='';
+  selectedTCTeam='';
+  tcPage=1;
+  // Update month tabs active state
+  document.querySelectorAll('#tc-month-tabs .team-month-tab').forEach(t=>t.classList.remove('active'));
+  const first=document.querySelector('#tc-month-tabs .team-month-tab');
+  if(first) first.classList.add('active');
+  renderTCOverall();
+  renderTCTeamCards();
+  renderTCCharts();
+  renderTCTable();
+}
+
+function selectTCMonth(ym){
+  selectedTCMonth=ym;
+  selectedTCTeam='';
+  document.querySelectorAll('#tc-month-tabs .team-month-tab').forEach(t=>{
+    const txt=t.textContent.trim();
+    const match=ym===''?txt==='ทั้งหมด':t.getAttribute('onclick')&&t.getAttribute('onclick').includes(`'${ym}'`);
+    t.classList.toggle('active',match);
+  });
+  renderTCOverall();
+  renderTCTeamCards();
+  renderTCCharts();
+  document.getElementById('tc-team-detail').innerHTML='';
+  document.getElementById('tc-filter-label').textContent=ym?`— ${payMonthLabel(ym)}`:'';
+  tcPage=1;
+  renderTCTable();
+}
+
+function getTCData(month='',team=''){
+  return ALL_PAYMENT.filter(r=>{
+    if(month&&r.month!==month) return false;
+    if(team&&r.team!==team) return false;
+    return true;
+  });
+}
+
+function renderTCOverall(){
+  const data=getTCData(selectedTCMonth);
+  const totComm=data.reduce((a,b)=>a+b.commission,0);
+  const totProfit=data.reduce((a,b)=>a+b.totalProfit,0);
+  const totPG=data.reduce((a,b)=>a+b.profitGuarantee,0);
+  const uniqueMembers=new Set(data.map(r=>r.bnbId)).size;
+  document.getElementById('tc-total-comm').textContent=fmtPay(totComm);
+  document.getElementById('tc-total-profit').textContent=fmtPay(totProfit);
+  document.getElementById('tc-total-pg').textContent=fmtPay(totPG);
+  document.getElementById('tc-total-members').textContent=uniqueMembers;
+}
+
+function renderTCTeamCards(){
+  const data=getTCData(selectedTCMonth);
+  const teams={};
+  data.forEach(r=>{
+    const t=r.team||'(ไม่ระบุทีม)';
+    if(!teams[t]) teams[t]={comm:0,members:new Set(),cnt:0};
+    teams[t].comm+=r.commission;
+    teams[t].members.add(r.bnbId);
+    teams[t].cnt++;
+  });
+  const sorted=Object.entries(teams).sort((a,b)=>b[1].comm-a[1].comm);
+  const colors=['t0','t1','t2','t3','t4','t5'];
+  const container=document.getElementById('tc-team-cards');
+  container.innerHTML=sorted.map(([team,v],i)=>`
+    <div class="team-card ${colors[i%colors.length]} ${selectedTCTeam===team?'selected':''}" onclick="selectTCTeam('${esc(team)}')">
+      <div class="team-name">${esc(team)}</div>
+      <div class="team-commission">${fmtPay(v.comm)}</div>
+      <div class="team-count">${v.members.size} สมาชิก · ${v.cnt} รายการ</div>
+    </div>`).join('');
+}
+
+function selectTCTeam(team){
+  selectedTCTeam=selectedTCTeam===team?'':team;
+  renderTCTeamCards();
+  if(selectedTCTeam){
+    renderTCTeamDetail(selectedTCTeam);
+  } else {
+    document.getElementById('tc-team-detail').innerHTML='';
+  }
+  tcPage=1;
+  renderTCTable();
+}
+
+function renderTCTeamDetail(team){
+  const data=getTCData(selectedTCMonth,team);
+  const months={};
+  data.forEach(r=>{
+    const m=r.month||'—';
+    if(!months[m]) months[m]={comm:0,profit:0,pg:0,transfer:0,cnt:0};
+    months[m].comm+=r.commission;
+    months[m].profit+=r.totalProfit;
+    months[m].pg+=r.profitGuarantee;
+    months[m].transfer+=r.totalTransfer;
+    months[m].cnt++;
+  });
+  const sortedM=Object.entries(months).sort((a,b)=>a[0].localeCompare(b[0]));
+  const detail=document.getElementById('tc-team-detail');
+  detail.innerHTML=`
+    <div class="team-detail-area">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:8px">
+        <div style="font-family:var(--font-h);font-size:15px;font-weight:700;color:var(--gold)">📊 ${esc(team)} — สรุปรายเดือน</div>
+        <button class="btn btn-outline" onclick="selectTCTeam('${esc(team)}')"><i data-lucide="x"></i> ปิด</button>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>เดือน</th><th class="td-num">Commission</th><th class="td-num">Total Profit</th><th class="td-num">Profit Guarantee</th><th class="td-num">Total Transfer</th><th>จำนวนรายการ</th></tr></thead>
+          <tbody>${sortedM.map(([m,v])=>`<tr>
+            <td style="font-weight:600;color:var(--gold)">${payMonthLabel(m)}</td>
+            <td class="td-num" style="color:var(--gold);font-weight:700">${fmtPay(v.comm)}</td>
+            <td class="td-num" style="color:var(--green)">${fmtPay(v.profit)}</td>
+            <td class="td-num" style="color:var(--blue)">${fmtPay(v.pg)}</td>
+            <td class="td-num" style="color:var(--cyan)">${fmtPay(v.transfer)}</td>
+            <td style="color:var(--text-s)">${v.cnt} รายการ</td>
+          </tr>`).join('')}
+          <tr style="border-top:2px solid var(--border-l);font-weight:700">
+            <td style="color:var(--text)">รวมทั้งหมด</td>
+            <td class="td-num" style="color:var(--gold)">${fmtPay(sortedM.reduce((a,[,v])=>a+v.comm,0))}</td>
+            <td class="td-num" style="color:var(--green)">${fmtPay(sortedM.reduce((a,[,v])=>a+v.profit,0))}</td>
+            <td class="td-num" style="color:var(--blue)">${fmtPay(sortedM.reduce((a,[,v])=>a+v.pg,0))}</td>
+            <td class="td-num" style="color:var(--cyan)">${fmtPay(sortedM.reduce((a,[,v])=>a+v.transfer,0))}</td>
+            <td style="color:var(--text-s)">${sortedM.reduce((a,[,v])=>a+v.cnt,0)} รายการ</td>
+          </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>`;
+  lucide.createIcons();
+}
+
+function renderTCCharts(){
+  // Team commission bar chart
+  const data=getTCData(selectedTCMonth);
+  const teams={};
+  data.forEach(r=>{
+    const t=r.team||'(ไม่ระบุ)';
+    teams[t]=(teams[t]||0)+r.commission;
+  });
+  const tLabels=Object.keys(teams).sort((a,b)=>teams[b]-teams[a]);
+  const tColors=['#F59E0B','#22C55E','#60A5FA','#A78BFA','#06B6D4','#F87171'];
+  destroyChart('chart-tc-team');
+  if(document.getElementById('chart-tc-team')){
+    chartInstances['chart-tc-team']=new Chart(document.getElementById('chart-tc-team'),{
+      type:'bar',
+      data:{labels:tLabels,datasets:[{label:'Commission (USD)',data:tLabels.map(t=>+teams[t].toFixed(2)),
+        backgroundColor:tLabels.map((_,i)=>tColors[i%tColors.length]),borderRadius:6}]},
+      options:{responsive:true,maintainAspectRatio:false,
+        plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>'$'+fmt(c.raw)}}},
+        scales:{x:{ticks:{color:'#6B9A8E',font:{size:10}},grid:{color:'rgba(22,53,69,.4)'}},
+                y:{ticks:{color:'#6B9A8E',font:{size:10},callback:v=>'$'+fmtN(v)},grid:{color:'rgba(22,53,69,.4)'}}}}
+    });
+  }
+  // Monthly commission line chart
+  const monthly={};
+  ALL_PAYMENT.forEach(r=>{
+    const m=r.month||'—';
+    monthly[m]=(monthly[m]||0)+r.commission;
+  });
+  const mLabels=Object.keys(monthly).sort();
+  destroyChart('chart-tc-monthly');
+  if(document.getElementById('chart-tc-monthly')){
+    chartInstances['chart-tc-monthly']=new Chart(document.getElementById('chart-tc-monthly'),{
+      type:'line',
+      data:{labels:mLabels.map(m=>payMonthLabel(m)),datasets:[{label:'Commission รวม',data:mLabels.map(m=>+monthly[m].toFixed(2)),
+        borderColor:'#F59E0B',backgroundColor:'rgba(245,158,11,.08)',fill:true,tension:.3,pointRadius:3,borderWidth:2,
+        pointBackgroundColor:'#F59E0B'}]},
+      options:{responsive:true,maintainAspectRatio:false,
+        plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>'$'+fmt(c.raw)}}},
+        scales:{x:{ticks:{color:'#6B9A8E',font:{size:10}},grid:{display:false}},
+                y:{ticks:{color:'#6B9A8E',font:{size:10},callback:v=>'$'+fmtN(v)},grid:{color:'rgba(22,53,69,.4)'}}}}
+    });
+  }
+}
+
+function renderTCTable(){
+  const q=(document.getElementById('tc-table-search')?.value||'').toLowerCase();
+  let data=getTCData(selectedTCMonth,selectedTCTeam);
+  if(q) data=data.filter(r=>r.name.toLowerCase().includes(q)||r.bnbId.includes(q)||r.team.toLowerCase().includes(q));
+  const total=data.length;
+  const pages=Math.ceil(total/PAY_PER_PAGE)||1;
+  const start=(tcPage-1)*PAY_PER_PAGE;
+  const slice=data.slice(start,start+PAY_PER_PAGE);
+  const tbody=document.getElementById('tc-tbody');
+  if(!tbody) return;
+  tbody.innerHTML=slice.length===0
+    ?'<tr><td colspan="14"><div class="empty-box"><div class="empty-icon">📊</div>ไม่พบรายการ</div></td></tr>'
+    :slice.map((r,i)=>`<tr>
+      <td style="color:var(--text-s)">${start+i+1}</td>
+      <td style="font-size:12px;font-weight:600">${esc(r.name)||'—'}</td>
+      <td style="font-family:var(--font-m);font-size:11px;color:var(--blue)">${esc(r.bnbId)}</td>
+      <td style="font-size:11px;color:var(--gold)">${esc(r.team)||'—'}</td>
+      <td style="font-size:11px;color:var(--text-s)">${esc(r.levelA)||'—'}</td>
+      <td style="font-size:11px;color:var(--text-s)">${esc(r.levelB)||'—'}</td>
+      <td style="font-size:11px;white-space:nowrap">${esc(r.payment)}</td>
+      <td class="td-num" style="color:var(--gold);font-weight:700">${fmtPay(r.commission)}</td>
+      <td class="td-num" style="color:var(--green)">${fmtPay(r.totalProfit)}</td>
+      <td class="td-num" style="color:var(--blue)">${fmtPay(r.profitGuarantee)}</td>
+      <td class="td-num" style="color:var(--purple)">${fmtPay(r.member)}</td>
+      <td class="td-num" style="color:var(--text-s)">${fmtPay(r.centralTeam)}</td>
+      <td class="td-num" style="color:var(--cyan)">${fmtPay(r.totalTransfer)}</td>
+      <td><span class="badge ${r.position==='Approve'?'badge-dep':'badge-wd'}">${esc(r.position)||'—'}</span></td>
+    </tr>`).join('');
+  renderPayPagination(tcPage,pages,'tc');
+}
+function tcGo(p){tcPage=p;renderTCTable();document.querySelector('.main').scrollTop=0;}
+
+// ══════════════════════════════════════════
+// INIT
+// ══════════════════════════════════════════
+lucide.createIcons();
+</script>
+</body>
+</html>
